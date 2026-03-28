@@ -1,0 +1,9 @@
+# Fliq - Clipboard & File Transfer Web App
+# https://github.com/7sadakonr/Fliq-Clipboard-and-File-Transfer-Web-App
+
+User-agent: *
+Allow: /
+Disallow: /transfer
+
+# Sitemap
+Sitemap: https://fliq-transfer.vercel.app/sitemap.xml

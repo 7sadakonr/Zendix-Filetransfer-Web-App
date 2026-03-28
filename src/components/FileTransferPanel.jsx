@@ -35,9 +35,11 @@ const FileTransferPanel = () => {
                 </div>
                 <input
                     type="file"
-                    className="hidden"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     onChange={handleFileSelect}
+                    onClick={(e) => { e.target.value = null; }}
                     disabled={connectionStatus !== 'connected'}
+                    accept="*/*"
                     multiple
                 />
             </label>

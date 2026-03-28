@@ -27,7 +27,18 @@ export const useFileTransfer = () => {
 
     // Send File
     const sendFile = useCallback(async (file) => {
-        if (!activeConnection) return;
+        console.log('[File] Selected:', file.name, 'Size:', file.size, 'Type:', file.type);
+
+        if (!activeConnection) {
+            console.warn('[File] No active connection, cannot send');
+            return;
+        }
+
+        // Validate file - Android sometimes returns 0-byte files for invalid URIs
+        if (!file || file.size === 0) {
+            console.error('[File] Invalid file: empty or 0 bytes');
+            return;
+        }
 
         const transferId = Date.now().toString();
 

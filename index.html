@@ -3,14 +3,115 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fliq</title>
+
+  <!-- Primary SEO Meta Tags -->
+  <title>Fliq — Fast P2P File & Clipboard Transfer | No Cloud, No Sign-up</title>
+  <meta name="description" content="Fliq is a free peer-to-peer file and clipboard sharing web app. Transfer files up to 100MB and sync clipboard text directly between devices with end-to-end encryption. No cloud storage, no sign-up required." />
+  <meta name="keywords" content="file transfer, clipboard sharing, P2P transfer, peer to peer, send files, share clipboard, QR code connect, WebRTC, no cloud, encrypted transfer, cross platform, Fliq" />
+  <meta name="author" content="7sadakonr" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#1a1a1a" />
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://fliq-transfer.vercel.app/" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://fliq-transfer.vercel.app/" />
+  <meta property="og:title" content="Fliq — Fast P2P File & Clipboard Transfer" />
+  <meta property="og:description" content="Transfer files and clipboard content directly between devices with peer-to-peer encryption. No cloud storage, no sign-up required." />
+  <meta property="og:image" content="https://fliq-transfer.vercel.app/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:site_name" content="Fliq" />
+  <meta property="og:locale" content="en_US" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="https://fliq-transfer.vercel.app/" />
+  <meta name="twitter:title" content="Fliq — Fast P2P File & Clipboard Transfer" />
+  <meta name="twitter:description" content="Transfer files and clipboard content directly between devices with peer-to-peer encryption. No cloud, no sign-up." />
+  <meta name="twitter:image" content="https://fliq-transfer.vercel.app/og-image.png" />
+
+  <!-- Favicons & Icons -->
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <link rel="apple-touch-icon" href="/logo.svg" />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Google Analytics 4 (GA4) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-R2S284GEXD"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-R2S284GEXD');
+  </script>
+
+  <!-- Structured Data (JSON-LD) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Fliq",
+    "url": "https://fliq-transfer.vercel.app/",
+    "description": "A free peer-to-peer file and clipboard sharing web app. Transfer files up to 100MB and sync clipboard text directly between devices with end-to-end encryption.",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "Any",
+    "browserRequirements": "Requires JavaScript. Requires WebRTC support.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "author": {
+      "@type": "Person",
+      "name": "7sadakonr",
+      "url": "https://github.com/7sadakonr"
+    },
+    "featureList": [
+      "End-to-end encrypted P2P file transfer",
+      "Clipboard text synchronization",
+      "QR code device pairing",
+      "Cross-platform browser support",
+      "No cloud storage required",
+      "No sign-up required",
+      "Files up to 100MB"
+    ],
+    "screenshot": "https://fliq-transfer.vercel.app/og-image.png"
+  }
+  </script>
 </head>
 
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
+
+  <!-- Fallback for search engine bots that don't execute JavaScript -->
+  <noscript>
+    <div style="max-width: 800px; margin: 40px auto; padding: 20px; font-family: Inter, system-ui, sans-serif; color: #e5e5e5; background: #1a1a1a;">
+      <h1>Fliq — Fast P2P File & Clipboard Transfer</h1>
+      <p>Fliq is a free, open-source web app for transferring files and clipboard content directly between devices using peer-to-peer (WebRTC) technology.</p>
+      <h2>Key Features</h2>
+      <ul>
+        <li><strong>End-to-End Encrypted</strong> — Direct P2P connection, no server storage</li>
+        <li><strong>Cross-Platform</strong> — Works on Desktop, iOS, Android via any modern browser</li>
+        <li><strong>Clipboard Sync</strong> — Share text instantly between devices</li>
+        <li><strong>Fast File Transfer</strong> — Send files up to 100MB with real-time progress tracking</li>
+        <li><strong>QR Code Pairing</strong> — Easy device connection via QR code scan</li>
+      </ul>
+      <h2>How It Works</h2>
+      <ol>
+        <li><strong>Connect</strong> — Scan a QR code or enter a Peer ID to pair devices</li>
+        <li><strong>Transfer</strong> — Share clipboard text or send files directly</li>
+        <li><strong>Done</strong> — Data is transferred directly between devices, nothing is stored on servers</li>
+      </ol>
+      <p>Please enable JavaScript to use Fliq.</p>
+      <p><a href="https://github.com/7sadakonr/Fliq-Clipboard-and-File-Transfer-Web-App" style="color: #06b6d4;">View on GitHub</a></p>
+    </div>
+  </noscript>
 </body>
 
 </html>

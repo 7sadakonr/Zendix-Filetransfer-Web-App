@@ -1,0 +1,21 @@
+{
+  "name": "Fliq — Fast P2P File & Clipboard Transfer",
+  "short_name": "Fliq",
+  "description": "Transfer files and clipboard content directly between devices with peer-to-peer encryption. No cloud storage, no sign-up required.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#1a1a1a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["utilities", "productivity"],
+  "lang": "en",
+  "dir": "ltr"
+}
