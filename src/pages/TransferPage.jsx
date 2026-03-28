@@ -36,10 +36,7 @@ const TransferPage = () => {
                 // add a small delay to avoid spamming the signaling server immediately on wake
                 const timer = setTimeout(() => {
                     useAppStore.getState().setConnectionStatus('connecting'); // optimistic UI update
-                    import('../hooks/usePeerConnection').then(({ usePeerConnection }) => {
-                        // Peer instance auto-initialized, let's connect
-                        connectToPeer(remotePeerId);
-                    });
+                    connectToPeer(remotePeerId);
                 }, 1500);
                 return () => clearTimeout(timer);
             } else {

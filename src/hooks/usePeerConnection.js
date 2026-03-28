@@ -102,16 +102,37 @@ const initializePeer = () => {
                 }
                 store.clearPersistedData();
             }
+        } else if (err.type === 'unavailable-id') {
+            // This happens if the user reloads the page before the signaling server realizes 
+            // they disconnected. In this case, their "saved" myPeerId from localStorage is 
+            // rejected. Force clear to get a brand new ID on reload.
+            console.warn('[Peer] Requested ID is taken or stale. Clearing and reloading.');
+            store.clearPersistedData();
+            if (peerInstance) {
+                peerInstance.destroy();
+                peerInstance = null;
+                isInitialized = false;
+            }
+            window.location.href = '/';
+        } else {
+            // For other generic errors, ensure the UI isn't stuck "connecting" forever
+            if (store.connectionStatus === 'connecting') {
+                store.setConnectionStatus('disconnected');
+            }
         }
     });
 
     return peerInstance;
 };
 
-const setupConnectionHandlers = (conn) => {
+const setupConnectionHandlers = (conn, timeoutRef) => {
     const store = useAppStore.getState();
 
     conn.on('open', () => {
+        if (timeoutRef?.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+        }
         console.log('[Conn] Opened with:', conn.peer);
         useAppStore.getState().setConnectionStatus('connected');
         useAppStore.getState().setActiveConnection(conn);
@@ -206,7 +227,18 @@ export const usePeerConnection = () => {
         useAppStore.getState().setConnectionStatus('connecting');
 
         const conn = peerInstance.connect(peerId, { reliable: true });
-        setupConnectionHandlers(conn);
+        
+        // Add a safety timeout to avoid infinite "Waiting..." state
+        const connectionTimeout = { current: null };
+        connectionTimeout.current = setTimeout(() => {
+            if (useAppStore.getState().connectionStatus !== 'connected') {
+                console.warn('[Conn] Connection timed out after 10 seconds. Forcing disconnect.');
+                conn.close();
+                useAppStore.getState().setConnectionStatus('disconnected');
+            }
+        }, 10000);
+
+        setupConnectionHandlers(conn, connectionTimeout);
     }, []);
 
     const sendData = useCallback((type, payload) => {
@@ -218,22 +250,36 @@ export const usePeerConnection = () => {
         }
     }, []);
 
-    const manualDisconnect = useCallback(async () => {
-        const conn = useAppStore.getState().activeConnection;
+    const manualDisconnect = useCallback(() => {
+        const store = useAppStore.getState();
+        const conn = store.activeConnection;
+
         if (conn && conn.open) {
             console.log('[Conn] Sending logout signal and disconnecting manually');
             conn.send({ type: 'SYSTEM', payload: { action: 'LOGOUT' } });
             
-            // Give WebRTC a tiny bit of time to flush the buffer before destroying everything
-            await new Promise(r => setTimeout(r, 100));
-            conn.close();
+            // Give WebRTC enough time to flush the buffer across the internet before destroying everything
+            setTimeout(() => {
+                try {
+                    conn.close();
+                } catch (e) { console.error('Error closing connection:', e); }
+                
+                if (peerInstance) {
+                    peerInstance.destroy();
+                    peerInstance = null;
+                    isInitialized = false;
+                }
+            }, 500);
+        } else {
+            if (peerInstance) {
+                peerInstance.destroy();
+                peerInstance = null;
+                isInitialized = false;
+            }
         }
-        if (peerInstance) {
-            peerInstance.destroy();
-            peerInstance = null;
-            isInitialized = false;
-        }
-        useAppStore.getState().clearPersistedData();
+        
+        // Clear local state immediately so UI feels instant
+        store.clearPersistedData();
     }, []);
 
     return {
