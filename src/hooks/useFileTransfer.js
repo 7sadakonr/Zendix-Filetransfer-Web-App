@@ -73,15 +73,17 @@ export const useFileTransfer = () => {
 
                 // Backpressure / Flow Control
                 if (activeConnection?.dataChannel) {
-                    // Buffer up to 4MB to maximize throughput on good connections
-                    // Check every 1ms for minimal latency
-                    const MAX_BUFFER = 4 * 1024 * 1024; // 4MB
+                    // Buffer up to 1MB to prevent SCTP buffer overflow on some browsers
+                    const MAX_BUFFER = 1 * 1024 * 1024; // 1MB
 
                     while (activeConnection.dataChannel.bufferedAmount > MAX_BUFFER) {
-                        await new Promise(r => setTimeout(r, 1));
+                        await new Promise(r => setTimeout(r, 10)); // wait slightly longer to let buffer drain
                     }
                 }
-                // Removed fallback delay - let chunks flow as fast as possible
+                // Yield occasionally to prevent UI freezes
+                if (offset % (16 * 1024 * 10) === 0) {
+                    await new Promise(r => setTimeout(r, 0));
+                }
 
                 sendData('FILE', {
                     type: 'CHUNK',

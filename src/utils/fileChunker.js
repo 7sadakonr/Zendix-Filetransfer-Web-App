@@ -1,4 +1,4 @@
-const CHUNK_SIZE = 256 * 1024; // 256KB for faster throughput
+const CHUNK_SIZE = 16 * 1024; // 16KB is the safest WebRTC fragmentation size
 
 export const chunkFile = (file, onChunk, signal) => {
     return new Promise((resolve, reject) => {
