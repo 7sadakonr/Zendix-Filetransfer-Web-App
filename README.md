@@ -1,5 +1,7 @@
 # Fliq - Clipboard & File Transfer
 
+# Fliq - Clipboard & File Transfer
+
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
 
@@ -96,3 +98,7 @@ MIT License - feel free to use this project for personal or commercial purposes.
 ---
 
 Made with ❤️ by [@7sadakonr](https://github.com/7sadakonr)
+Made by [@7sadakonr](https://github.com/7sadakonr)
+
+
+
