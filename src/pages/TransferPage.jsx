@@ -96,7 +96,9 @@ const TransferPage = () => {
     ].sort((a, b) => b.timestamp - a.timestamp);
 
     return (
-        <div className="fixed inset-0 flex flex-col md:flex-row md:items-center md:justify-center p-3 sm:p-4 lg:p-8 font-['Inter'] overflow-hidden bg-[#1a1a1a]">
+        <main aria-label="Fliq - Transfer files and clipboard" className="fixed inset-0 flex flex-col md:flex-row md:items-center md:justify-center p-3 sm:p-4 lg:p-8 font-['Inter'] overflow-hidden bg-[#1a1a1a]">
+            {/* SEO: Hidden h1 for search engines */}
+            <h1 className="sr-only">Fliq — Peer-to-Peer File Transfer and Clipboard Sync</h1>
             {/* Ambient glow background */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 rounded-full opacity-20 blur-[100px]"
@@ -118,6 +120,7 @@ const TransferPage = () => {
                     <div className="relative flex items-center gap-2 shrink-0">
                         <button
                             onClick={handleLogout}
+                            aria-label="Disconnect and return to home"
                             className="p-2.5 rounded-full bg-[#2a2a2a] border border-white/[0.08] text-zinc-500 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 transition-all"
                             title="Disconnect"
                         >
@@ -233,7 +236,7 @@ const TransferPage = () => {
 
                     {/* Header */}
                     <div className="flex items-center justify-between shrink-0 mb-4">
-                        <h2 className="text-neutral-200 text-xl sm:text-2xl font-semibold">Recent Activity</h2>
+                        <h2 className="text-neutral-200 text-xl sm:text-2xl font-semibold" id="activity-heading">Recent Activity</h2>
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                             <span className="text-zinc-400 text-sm">{getFriendlyName(remotePeerId)}</span>
@@ -349,7 +352,7 @@ const TransferPage = () => {
                     background: rgba(255, 255, 255, 0.2);
                 }
             `}</style>
-        </div>
+        </main>
     );
 };
 

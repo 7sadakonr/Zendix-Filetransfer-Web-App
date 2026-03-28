@@ -62,7 +62,9 @@ const ConnectPage = () => {
         : '';
 
     return (
-        <div className="fixed inset-0 flex flex-col md:flex-row md:items-center md:justify-center p-3 sm:p-4 lg:p-8 font-['Inter'] overflow-hidden bg-[#1a1a1a]">
+        <main aria-label="Fliq - Connect to a peer device" className="fixed inset-0 flex flex-col md:flex-row md:items-center md:justify-center p-3 sm:p-4 lg:p-8 font-['Inter'] overflow-hidden bg-[#1a1a1a]">
+            {/* SEO: Hidden h1 for search engines */}
+            <h1 className="sr-only">Fliq — Fast Peer-to-Peer File and Clipboard Transfer</h1>
             {/* Subtle ambient glow for background */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 rounded-full opacity-20 blur-[100px]"
@@ -83,7 +85,7 @@ const ConnectPage = () => {
 
                     {/* Header */}
                     <div className="relative flex justify-between items-center shrink-0">
-                        <h2 className="text-neutral-200 text-lg sm:text-xl font-semibold">Your Identity</h2>
+                        <h2 className="text-neutral-200 text-lg sm:text-xl font-semibold" id="identity-heading">Your Identity</h2>
                         <img src={Logo} alt="FLIO" className="h-4 sm:h-5 w-auto opacity-70 transition-opacity duration-300 ease-out group-hover:opacity-100" />
                     </div>
 
@@ -135,6 +137,7 @@ const ConnectPage = () => {
                         </div>
                         <button
                             onClick={copyMyId}
+                            aria-label={copied ? 'Device ID copied' : 'Copy device ID to clipboard'}
                             className="p-1.5 sm:p-2 rounded-lg shrink-0"
                             style={{
                                 color: copied ? '#34d399' : 'rgba(163, 163, 163, 1)',
@@ -171,7 +174,7 @@ const ConnectPage = () => {
                     }}>
 
                     {/* Header */}
-                    <h2 className="relative text-neutral-200 text-lg sm:text-xl font-semibold shrink-0">Connect to Peer</h2>
+                    <h2 className="relative text-neutral-200 text-lg sm:text-xl font-semibold shrink-0" id="connect-heading">Connect to Peer</h2>
 
                     {/* Divider */}
                     <div className="relative w-full h-px my-3 sm:my-4 shrink-0"
@@ -184,6 +187,8 @@ const ConnectPage = () => {
                         </div>
                         <input
                             type="text"
+                            id="peer-id-input"
+                            aria-label="Enter remote peer ID"
                             value={remoteIdInput}
                             onChange={(e) => setRemoteIdInput(e.target.value)}
                             placeholder="astro-apollo-77"
@@ -208,6 +213,7 @@ const ConnectPage = () => {
                     <button
                         onClick={handleConnect}
                         disabled={!remoteIdInput.trim()}
+                        aria-label="Connect to peer device"
                         className="w-full bg-white text-zinc-800 rounded-lg py-2.5 text-sm sm:text-base font-semibold mb-3 sm:mb-4 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                         style={{
                             transition: 'all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
@@ -246,6 +252,7 @@ const ConnectPage = () => {
                     {/* Scan Button */}
                     <button
                         onClick={() => setShowScanner(true)}
+                        aria-label="Scan QR code to connect"
                         className="w-full bg-[#3a3a3a] text-white rounded-lg py-2.5 text-sm sm:text-base font-medium flex items-center justify-center gap-2 mb-3 sm:mb-4 shrink-0"
                         style={{
                             transition: 'all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
@@ -320,7 +327,7 @@ const ConnectPage = () => {
                     }}
                 />
             )}
-        </div>
+        </main>
     );
 };
 
