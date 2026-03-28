@@ -3,15 +3,17 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover" />
 
   <!-- Primary SEO Meta Tags -->
-  <title>Fliq — Fast P2P File & Clipboard Transfer | No Cloud, No Sign-up</title>
-  <meta name="description" content="Fliq is a free peer-to-peer file and clipboard sharing web app. Transfer files up to 100MB and sync clipboard text directly between devices with end-to-end encryption. No cloud storage, no sign-up required." />
-  <meta name="keywords" content="file transfer, clipboard sharing, P2P transfer, peer to peer, send files, share clipboard, QR code connect, WebRTC, no cloud, encrypted transfer, cross platform, Fliq" />
+  <title>Fliq — Fast P2P filetransfer & Clipboard Sync | No Cloud, No Sign-up</title>
+  <meta name="description" content="Seamlessly handle filetransfer and sync your clipboard between any two devices, regardless of their ecosystem. No more email-to-self—Fliq provides fast, web-based sharing for iOS, Android, Windows, and Mac." />
+  <meta name="keywords" content="fliq, filetransfer, clipboard, file transfer, clipboard sharing, P2P transfer, peer to peer, send files, share clipboard, QR code connect, WebRTC, no cloud, encrypted transfer, cross platform" />
   <meta name="author" content="7sadakonr" />
   <meta name="robots" content="index, follow" />
   <meta name="theme-color" content="#1a1a1a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
   <!-- Canonical URL -->
   <link rel="canonical" href="https://fliq-transfer.vercel.app/" />
@@ -19,8 +21,8 @@
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://fliq-transfer.vercel.app/" />
-  <meta property="og:title" content="Fliq — Fast P2P File & Clipboard Transfer" />
-  <meta property="og:description" content="Transfer files and clipboard content directly between devices with peer-to-peer encryption. No cloud storage, no sign-up required." />
+  <meta property="og:title" content="Fliq — Fast P2P filetransfer & Clipboard Sync" />
+  <meta property="og:description" content="Seamlessly handle filetransfer and sync your clipboard between any two devices, regardless of their ecosystem. No more email-to-self—Fliq provides fast, web-based sharing for iOS, Android, Windows, and Mac." />
   <meta property="og:image" content="https://fliq-transfer.vercel.app/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -30,8 +32,8 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:url" content="https://fliq-transfer.vercel.app/" />
-  <meta name="twitter:title" content="Fliq — Fast P2P File & Clipboard Transfer" />
-  <meta name="twitter:description" content="Transfer files and clipboard content directly between devices with peer-to-peer encryption. No cloud, no sign-up." />
+  <meta name="twitter:title" content="Fliq — Fast P2P filetransfer & Clipboard Sync" />
+  <meta name="twitter:description" content="Seamlessly handle filetransfer and sync your clipboard between any two devices, regardless of their ecosystem. No more email-to-self—Fliq provides fast, web-based sharing." />
   <meta name="twitter:image" content="https://fliq-transfer.vercel.app/og-image.png" />
 
   <!-- Favicons & Icons -->
@@ -57,7 +59,7 @@
     "@type": "WebApplication",
     "name": "Fliq",
     "url": "https://fliq-transfer.vercel.app/",
-    "description": "A free peer-to-peer file and clipboard sharing web app. Transfer files up to 100MB and sync clipboard text directly between devices with end-to-end encryption.",
+    "description": "Seamlessly handle filetransfer and sync your clipboard between any two devices, regardless of their ecosystem. No more email-to-self—Fliq provides fast, web-based sharing for iOS, Android, Windows, and Mac.",
     "applicationCategory": "UtilitiesApplication",
     "operatingSystem": "Any",
     "browserRequirements": "Requires JavaScript. Requires WebRTC support.",
@@ -83,6 +85,33 @@
     "screenshot": "https://fliq-transfer.vercel.app/og-image.png"
   }
   </script>
+
+  <!-- Anti-FOUC (Flash of Unstyled Content) for Dev Mode -->
+  <style>
+    :root {
+      background-color: #1a1a1a;
+      color: rgba(255, 255, 255, 0.87);
+      font-family: Inter, system-ui, sans-serif;
+    }
+    body {
+      margin: 0;
+      background-color: #1a1a1a;
+      display: flex;
+      place-items: center;
+      min-width: 320px;
+      min-height: 100vh;
+    }
+    #root {
+      width: 100%;
+      min-height: 100vh;
+      /* Add subtle fade-in to mask dev-mode CSS injection latency */
+      animation: fadeIn 0.4s ease-in-out;
+    }
+    @keyframes fadeIn {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+  </style>
 </head>
 
 <body>
@@ -92,14 +121,14 @@
   <!-- Fallback for search engine bots that don't execute JavaScript -->
   <noscript>
     <div style="max-width: 800px; margin: 40px auto; padding: 20px; font-family: Inter, system-ui, sans-serif; color: #e5e5e5; background: #1a1a1a;">
-      <h1>Fliq — Fast P2P File & Clipboard Transfer</h1>
-      <p>Fliq is a free, open-source web app for transferring files and clipboard content directly between devices using peer-to-peer (WebRTC) technology.</p>
+      <h1>Fliq — Fast P2P filetransfer & Clipboard Sync</h1>
+      <p>Seamlessly handle filetransfer and sync your clipboard between any two devices, regardless of their ecosystem. No more email-to-self—Fliq provides fast, web-based sharing for iOS, Android, Windows, and Mac.</p>
       <h2>Key Features</h2>
       <ul>
         <li><strong>End-to-End Encrypted</strong> — Direct P2P connection, no server storage</li>
         <li><strong>Cross-Platform</strong> — Works on Desktop, iOS, Android via any modern browser</li>
         <li><strong>Clipboard Sync</strong> — Share text instantly between devices</li>
-        <li><strong>Fast File Transfer</strong> — Send files up to 100MB with real-time progress tracking</li>
+        <li><strong>Fast filetransfer</strong> — Send files up to 100MB with real-time progress tracking</li>
         <li><strong>QR Code Pairing</strong> — Easy device connection via QR code scan</li>
       </ul>
       <h2>How It Works</h2>

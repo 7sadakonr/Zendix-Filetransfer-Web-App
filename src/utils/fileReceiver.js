@@ -1,4 +1,5 @@
 import useAppStore from '../stores/useAppStore';
+import { isMobile } from './platform';
 
 // In-memory buffer: Map<transferId, { chunks: [], receivedBytes: 0, metadata: {} }>
 const transfers = new Map();
@@ -47,14 +48,20 @@ export const handleFileProtocol = (payload) => {
         console.log(`[FileReceiver] Complete: ${transfer.metadata.fileName}`);
         store.updateFileTransfer(transferId, { status: 'completed', progress: 100 });
 
-        // Auto-download
+        // Auto-download or Preview
         const blob = new Blob(transfer.chunks, { type: transfer.metadata.fileType });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = transfer.metadata.fileName;
-        a.click();
-        URL.revokeObjectURL(url);
+
+        if (isMobile() && transfer.metadata.fileType.startsWith('image/')) {
+            console.log(`[FileReceiver] Image received on mobile, opening preview: ${transfer.metadata.fileName}`);
+            store.setPreviewImage({ url, name: transfer.metadata.fileName });
+        } else {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = transfer.metadata.fileName;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
 
         // Cleanup
         transfers.delete(transferId);

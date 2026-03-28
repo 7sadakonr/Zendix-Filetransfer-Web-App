@@ -16,11 +16,10 @@ const ConnectPage = () => {
     const [remoteIdInput, setRemoteIdInput] = useState('');
     const [copied, setCopied] = useState(false);
 
-    // Generate a friendly device name from peer ID
+    // Get device name from peer ID
     const getDeviceName = (peerId) => {
         if (!peerId) return 'Initializing...';
-        const parts = peerId.split('-');
-        return parts.length > 1 ? `${parts[0]}-${parts[parts.length - 1]}` : peerId;
+        return peerId;
     };
 
     // Auto-Connect from URL
@@ -36,12 +35,15 @@ const ConnectPage = () => {
         }
     }, [connectToPeer]);
 
-    // Navigate to transfer when connected
+    // Navigate to transfer when connected or if session restored
     useEffect(() => {
         if (connectionStatus === 'connected') {
             setTimeout(() => navigate('/transfer'), 1000);
+        } else if (remotePeerId) {
+            // Auto redirect to transfer page to attempt reconnection
+            navigate('/transfer');
         }
-    }, [connectionStatus, navigate]);
+    }, [connectionStatus, remotePeerId, navigate]);
 
     const copyMyId = () => {
         if (myPeerId) {
@@ -52,9 +54,18 @@ const ConnectPage = () => {
     };
 
     const handleConnect = () => {
-        if (remoteIdInput.trim()) {
-            connectToPeer(remoteIdInput.trim());
+        if (!remoteIdInput.trim()) return;
+
+        // Auto-format: Remove whitespaces, make lowercase, and insert hyphen if missing
+        let formattedId = remoteIdInput.trim().toLowerCase().replace(/\s+/g, '');
+        if (!formattedId.includes('-')) {
+            const match = formattedId.match(/^([a-z]+)(\d+)$/);
+            if (match) {
+                formattedId = `${match[1]}-${match[2]}`;
+            }
         }
+
+        connectToPeer(formattedId);
     };
 
     const qrUrl = myPeerId
@@ -62,14 +73,16 @@ const ConnectPage = () => {
         : '';
 
     return (
-        <main aria-label="Fliq - Connect to a peer device" className="fixed inset-0 flex flex-col md:flex-row md:items-center md:justify-center p-3 sm:p-4 lg:p-8 font-['Inter'] overflow-hidden bg-[#1a1a1a]">
+        <main aria-label="Fliq - Connect to a peer device" className="fixed inset-0 flex flex-col md:flex-row md:items-center md:justify-center px-4 sm:px-6 lg:px-8 pt-[calc(1rem+env(safe-area-inset-top))] sm:pt-[calc(1.5rem+env(safe-area-inset-top))] lg:pt-[calc(2rem+env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:pb-[max(2rem,env(safe-area-inset-bottom))] font-['Inter'] overflow-hidden">
+            {/* Safe Area Top Mask to guarantee solid status bar color */}
+            <div className="fixed top-0 left-0 w-full h-[env(safe-area-inset-top)] bg-[#1a1a1a] z-50 pointer-events-none"></div>
             {/* SEO: Hidden h1 for search engines */}
             <h1 className="sr-only">Fliq — Fast Peer-to-Peer File and Clipboard Transfer</h1>
             {/* Subtle ambient glow for background */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 rounded-full opacity-20 blur-[100px]"
+            <div className="fixed top-0 left-0 w-full h-[100vh] overflow-hidden pointer-events-none -z-10">
+                <div className="absolute top-[-10%] left-[-10%] w-[60vw] min-w-[300px] aspect-square rounded-full opacity-20 blur-[80px] sm:blur-[100px]"
                     style={{ background: 'radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%)' }} />
-                <div className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 rounded-full opacity-20 blur-[100px]"
+                <div className="absolute top-[60%] right-[-10%] w-[60vw] min-w-[300px] aspect-square rounded-full opacity-20 blur-[80px] sm:blur-[100px]"
                     style={{ background: 'radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%)' }} />
             </div>
 
@@ -191,7 +204,7 @@ const ConnectPage = () => {
                             aria-label="Enter remote peer ID"
                             value={remoteIdInput}
                             onChange={(e) => setRemoteIdInput(e.target.value)}
-                            placeholder="astro-apollo-77"
+                            placeholder="astro-77"
                             className="w-full bg-white rounded-lg px-3 py-2.5 text-sm sm:text-base text-neutral-700 font-medium outline-none placeholder:text-neutral-400"
                             style={{
                                 transition: 'box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.2s ease',

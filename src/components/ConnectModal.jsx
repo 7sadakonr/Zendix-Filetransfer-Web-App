@@ -12,11 +12,10 @@ const ConnectModal = ({ onClose, myPeerId, onScanConnect }) => {
         setQrUrl(url);
     }, [myPeerId]);
 
-    // Get friendly device name
+    // Get device name from peer ID
     const getDeviceName = (peerId) => {
         if (!peerId) return 'Loading...';
-        const parts = peerId.split('-');
-        return parts.length > 1 ? `${parts[0]}-${parts[parts.length - 1]}` : peerId;
+        return peerId;
     };
 
     return (

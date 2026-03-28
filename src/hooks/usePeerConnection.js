@@ -15,7 +15,7 @@ const initializePeer = () => {
     }
 
     const store = useAppStore.getState();
-    const id = generatePeerId();
+    const id = store.myPeerId || generatePeerId();
 
     console.log('[Peer] Creating new instance with ID:', id);
 
@@ -86,6 +86,23 @@ const initializePeer = () => {
 
     peerInstance.on('error', (err) => {
         console.error('[Peer] Error:', err);
+        const store = useAppStore.getState();
+        
+        if (err.type === 'peer-unavailable') {
+            // If we already have a remotePeerId saved, it means we were trying an auto-reconnect 
+            // after being disconnected (e.g. waking up from background). 
+            // If the peer is unavailable now, they likely clicked Logout while we were asleep.
+            // We must destroy our session so we don't get stuck in 'Reconnecting...' forever.
+            if (store.remotePeerId) {
+                console.log('[Peer] Stored remote peer not found. They logged out. Forcing local logout.');
+                if (peerInstance) {
+                    peerInstance.destroy();
+                    peerInstance = null;
+                    isInitialized = false;
+                }
+                store.clearPersistedData();
+            }
+        }
     });
 
     return peerInstance;
@@ -111,7 +128,7 @@ const setupConnectionHandlers = (conn) => {
         if (currentConn?.peer === conn.peer) {
             useAppStore.getState().setConnectionStatus('disconnected');
             useAppStore.getState().setActiveConnection(null);
-            useAppStore.getState().setRemotePeerId(null);
+            // We DO NOT clear remotePeerId here, so the UI knows we *were* connected and can auto-reconnect
         }
     });
 
@@ -139,6 +156,17 @@ const handleIncomingData = (data) => {
             break;
         case 'FILE':
             handleFileProtocol(data.payload);
+            break;
+        case 'SYSTEM':
+            if (data.payload?.action === 'LOGOUT') {
+                console.log('[System] Remote peer logged out. Clearing local state.');
+                if (peerInstance) {
+                    peerInstance.destroy();
+                    peerInstance = null;
+                    isInitialized = false;
+                }
+                store.clearPersistedData();
+            }
             break;
         default:
             console.warn('Unknown data type:', data.type);
@@ -190,15 +218,22 @@ export const usePeerConnection = () => {
         }
     }, []);
 
-    const disconnectPeer = useCallback(() => {
+    const manualDisconnect = useCallback(async () => {
         const conn = useAppStore.getState().activeConnection;
-        if (conn) {
-            console.log('[Conn] Disconnecting manually');
+        if (conn && conn.open) {
+            console.log('[Conn] Sending logout signal and disconnecting manually');
+            conn.send({ type: 'SYSTEM', payload: { action: 'LOGOUT' } });
+            
+            // Give WebRTC a tiny bit of time to flush the buffer before destroying everything
+            await new Promise(r => setTimeout(r, 100));
             conn.close();
         }
-        useAppStore.getState().setConnectionStatus('disconnected');
-        useAppStore.getState().setActiveConnection(null);
-        useAppStore.getState().setRemotePeerId(null);
+        if (peerInstance) {
+            peerInstance.destroy();
+            peerInstance = null;
+            isInitialized = false;
+        }
+        useAppStore.getState().clearPersistedData();
     }, []);
 
     return {
@@ -206,7 +241,7 @@ export const usePeerConnection = () => {
         myPeerId,
         activeConnection,
         connectToPeer,
-        disconnectPeer,
+        disconnectPeer: manualDisconnect,
         sendData
     };
 };
