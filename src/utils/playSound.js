@@ -51,7 +51,7 @@ const loadSoundBuffer = async (key) => {
 /**
  * "Unlock" the AudioContext on mobile.
  */
-const unlockAudio = async () => {
+const unlockAudio = () => {
     if (unlocked) return;
     unlocked = true;
 
@@ -59,7 +59,7 @@ const unlockAudio = async () => {
         const ctx = getAudioContext();
 
         if (ctx.state === 'suspended') {
-            await ctx.resume();
+            ctx.resume();
         }
 
         const silentBuffer = ctx.createBuffer(1, 1, 22050);
@@ -68,10 +68,8 @@ const unlockAudio = async () => {
         source.connect(ctx.destination);
         source.start(0);
 
-        await Promise.all([
-            loadSoundBuffer('start'),
-            loadSoundBuffer('complete'),
-        ]);
+        loadSoundBuffer('start');
+        loadSoundBuffer('complete');
 
         console.log('[Sound] ✅ Audio unlocked for mobile playback');
     } catch (err) {

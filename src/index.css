@@ -24,6 +24,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   touch-action: manipulation; /* Prevent double-tap zoom on mobile */
+  overscroll-behavior-y: none;
 }
 
 #root {
