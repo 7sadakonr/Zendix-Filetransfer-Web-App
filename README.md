@@ -1,9 +1,9 @@
-# Fliq - Clipboard & File Transfer
+# Blap - Clipboard & File Transfer
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
 
-**Fliq** is a peer-to-peer file and clipboard sharing web app. Transfer files and text directly between devices without uploading to the cloud.
+**Blap** is a peer-to-peer file and clipboard sharing web app. Transfer files and text directly between devices without uploading to the cloud.
 
 ## ✨ Features
 
@@ -23,10 +23,10 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/7sadakonr/Fliq-Clipboard-and-File-Transfer-Web-App.git
+git clone https://github.com/7sadakonr/Blap-Clipboard-and-File-Transfer-Web-App.git
 
 # Navigate to project
-cd Fliq-Clipboard-and-File-Transfer-Web-App
+cd Blap-Clipboard-and-File-Transfer-Web-App
 
 # Install dependencies
 npm install
@@ -87,7 +87,7 @@ src/
 
 Deploy to Vercel with one click:
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/7sadakonr/Fliq-Clipboard-and-File-Transfer-Web-App)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/7sadakonr/Blap-Clipboard-and-File-Transfer-Web-App)
 
 ## 📄 License
 

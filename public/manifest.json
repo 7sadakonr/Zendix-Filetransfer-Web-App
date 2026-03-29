@@ -1,6 +1,6 @@
 {
-  "name": "Fliq — Fast P2P File & Clipboard Transfer",
-  "short_name": "Fliq",
+  "name": "Blap — Fast P2P File & Clipboard Transfer",
+  "short_name": "Blap",
   "description": "Transfer files and clipboard content directly between devices with peer-to-peer encryption. No cloud storage, no sign-up required.",
   "start_url": "/",
   "display": "standalone",
@@ -9,9 +9,9 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "/logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/blap-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any"
     }
   ],

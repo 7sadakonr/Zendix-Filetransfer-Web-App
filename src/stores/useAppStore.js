@@ -51,7 +51,7 @@ const useAppStore = create(
             })
         }),
         {
-            name: 'fliq-storage', // key in localStorage
+            name: 'blap-storage', // key in localStorage
             partialize: (state) => ({
                 myPeerId: state.myPeerId,
                 remotePeerId: state.remotePeerId,
