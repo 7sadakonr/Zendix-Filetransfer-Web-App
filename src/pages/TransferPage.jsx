@@ -22,6 +22,7 @@ const TransferPage = () => {
     const [isDraggingOver, setIsDraggingOver] = useState(false);
     const [expandedItems, setExpandedItems] = useState({});
     const textareaRef = useRef(null);
+    const touchStartY = useRef(null);
 
     const toggleExpand = (id) => {
         setExpandedItems(prev => ({ ...prev, [id]: !prev[id] }));
@@ -504,13 +505,31 @@ const TransferPage = () => {
 
             {/* Image Preview Modal (Mobile native save experience) */}
             {previewImage && (
-                <div className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-md">
+                <div 
+                    className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-md transition-opacity duration-300"
+                    onTouchStart={(e) => {
+                        touchStartY.current = e.touches[0].clientY;
+                    }}
+                    onTouchMove={(e) => {
+                        // Prevent page scrolling while dragging modal content
+                        e.preventDefault();
+                    }}
+                    onTouchEnd={(e) => {
+                        if (touchStartY.current === null) return;
+                        const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+                        if (Math.abs(deltaY) > 80) {
+                            URL.revokeObjectURL(previewImage.url);
+                            setPreviewImage(null);
+                        }
+                        touchStartY.current = null;
+                    }}
+                >
                     <button 
                         onClick={() => {
                             URL.revokeObjectURL(previewImage.url);
                             setPreviewImage(null);
                         }}
-                        className="absolute top-4 right-4 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all z-50 pointer-events-auto"
+                        className="absolute top-[calc(1rem+env(safe-area-inset-top))] right-4 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all z-50 pointer-events-auto"
                         aria-label="Close Preview"
                     >
                         <X size={24} />
