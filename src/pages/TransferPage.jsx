@@ -6,7 +6,7 @@ import { useClipboardSync } from '../hooks/useClipboardSync';
 import { useFileTransfer } from '../hooks/useFileTransfer';
 import { getDeviceName } from '../utils/platform';
 import ClipboardToast from '../components/ClipboardToast';
-import { Clipboard, FileText, Copy, Check, Send, Lock, Upload, File, X, LogOut } from 'lucide-react';
+import { Clipboard, FileText, Copy, Check, Send, Lock, Upload, File, X, LogOut, Download, Image } from 'lucide-react';
 import clsx from 'clsx';
 
 const TransferPage = () => {
@@ -194,7 +194,7 @@ const TransferPage = () => {
             <div className="relative z-10 flex flex-col md:flex-row gap-3 sm:gap-4 lg:gap-6 w-full max-w-[560px] lg:max-w-[900px] h-full md:h-[600px] lg:h-[650px] justify-center items-stretch mx-auto">
 
                 {/* Left Panel - Input */}
-                <div 
+                <div
                     onDragEnter={(e) => {
                         // Check if it's a file being dragged
                         const types = e.dataTransfer.types;
@@ -207,7 +207,7 @@ const TransferPage = () => {
                     onDragOver={(e) => {
                         // Prevent default to allow dropping in the entire left panel if needed,
                         // but mainly we want the dropzone to handle the actual drop.
-                        e.preventDefault(); 
+                        e.preventDefault();
                     }}
                     className="relative group rounded-[20px] sm:rounded-[24px] lg:rounded-[32px] p-4 sm:p-5 lg:p-6 w-full md:w-[320px] lg:w-[400px] flex flex-col flex-1 md:flex-none min-h-0 backdrop-blur-2xl border border-white/[0.15] overflow-hidden"
                     style={{
@@ -307,18 +307,18 @@ const TransferPage = () => {
                             </div>
                         ) : (
                             <div className="flex-1 flex flex-col items-center justify-center min-h-0">
-                                <label 
+                                <label
                                     onDragOver={handleDragOver}
                                     onDragLeave={handleDragLeave}
                                     onDrop={handleDrop}
                                     className={clsx(
-                                    "relative flex flex-col items-center justify-center w-full h-full min-h-[150px] rounded-2xl border-2 transition-all cursor-pointer group/drop",
-                                    connectionStatus === 'connected'
-                                        ? isDraggingOver 
-                                            ? "border-cyan-400 bg-cyan-500/20 border-solid shadow-[0_0_15px_rgba(34,211,238,0.3)]" 
-                                            : "border-cyan-500/30 border-dashed hover:border-cyan-500/50 hover:bg-cyan-500/5"
-                                        : "border-white/10 border-dashed opacity-50 cursor-not-allowed"
-                                )}>
+                                        "relative flex flex-col items-center justify-center w-full h-full min-h-[150px] rounded-2xl border-2 transition-all cursor-pointer group/drop",
+                                        connectionStatus === 'connected'
+                                            ? isDraggingOver
+                                                ? "border-cyan-400 bg-cyan-500/20 border-solid shadow-[0_0_15px_rgba(34,211,238,0.3)]"
+                                                : "border-cyan-500/30 border-dashed hover:border-cyan-500/50 hover:bg-cyan-500/5"
+                                            : "border-white/10 border-dashed opacity-50 cursor-not-allowed"
+                                    )}>
                                     <Upload size={40} className={clsx("mb-3 transition-colors", isDraggingOver ? "text-cyan-400 scale-110" : "text-zinc-500 group-hover/drop:text-cyan-400")} />
                                     <p className={clsx("text-sm font-medium mb-1", isDraggingOver ? "text-cyan-300" : "text-zinc-400")}>
                                         {connectionStatus === 'connected' ? (isDraggingOver ? "Drop files now!" : "Click or drag files here") : "Reconnecting to send files..."}
@@ -503,15 +503,15 @@ const TransferPage = () => {
                 </div>
             )}
 
-            {/* Image Preview Modal (Mobile native save experience) */}
+            {/* Image Preview Modal (Premium Glassmorphism Design) */}
             {previewImage && (
-                <div 
-                    className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-md transition-opacity duration-300"
+                <div
+                    className="fixed inset-0 z-[100] flex flex-col items-center justify-center backdrop-blur-xl transition-all duration-300"
+                    style={{ background: 'radial-gradient(ellipse at center, rgba(30,30,30,0.97) 0%, rgba(10,10,10,0.99) 100%)' }}
                     onTouchStart={(e) => {
                         touchStartY.current = e.touches[0].clientY;
                     }}
                     onTouchMove={(e) => {
-                        // Prevent page scrolling while dragging modal content
                         e.preventDefault();
                     }}
                     onTouchEnd={(e) => {
@@ -524,27 +524,56 @@ const TransferPage = () => {
                         touchStartY.current = null;
                     }}
                 >
-                    <button 
-                        onClick={() => {
-                            URL.revokeObjectURL(previewImage.url);
-                            setPreviewImage(null);
-                        }}
-                        className="absolute top-[calc(1rem+env(safe-area-inset-top))] right-4 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all z-50 pointer-events-auto"
-                        aria-label="Close Preview"
-                    >
-                        <X size={24} />
-                    </button>
-                    <div className="flex-1 w-full flex items-center justify-center overflow-hidden mb-16 relative">
-                        <img 
-                            src={previewImage.url} 
-                            alt={previewImage.name} 
-                            className="max-w-full max-h-full object-contain rounded-lg drop-shadow-2xl pointer-events-auto select-none"
-                            style={{ WebkitTouchCallout: 'default' }} 
-                        />
+                    {/* Ambient glow behind image */}
+                    <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10">
+                        <div className="absolute top-[20%] left-[10%] w-[50vw] min-w-[250px] aspect-square rounded-full opacity-10 blur-[120px]"
+                            style={{ background: 'radial-gradient(circle, rgba(6, 182, 212, 0.3) 0%, transparent 70%)' }} />
+                        <div className="absolute bottom-[10%] right-[5%] w-[40vw] min-w-[200px] aspect-square rounded-full opacity-10 blur-[100px]"
+                            style={{ background: 'radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, transparent 70%)' }} />
                     </div>
-                    <div className="absolute bottom-6 left-0 w-full px-6 flex flex-col items-center gap-2 pointer-events-none">
-                        <p className="text-white text-sm font-medium drop-shadow-md truncate w-full text-center max-w-[250px]">{previewImage.name}</p>
-                        <p className="text-zinc-400 text-[10px] uppercase font-bold tracking-widest text-center">Long press image to save</p>
+
+                    {/* Top Bar */}
+                    <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 pt-[calc(1rem+env(safe-area-inset-top))] pb-3">
+                        {/* File Info Pill */}
+                        <div className="flex items-center gap-2.5 px-4 py-2 rounded-full backdrop-blur-2xl border border-white/[0.1]"
+                            style={{ background: 'rgba(42, 42, 42, 0.6)' }}>
+                            <Image size={14} className="text-cyan-400 shrink-0" />
+                            <span className="text-zinc-200 text-xs sm:text-sm font-medium truncate max-w-[150px] sm:max-w-[250px]">{previewImage.name}</span>
+                        </div>
+                        {/* Close Button */}
+                        <button
+                            onClick={() => {
+                                URL.revokeObjectURL(previewImage.url);
+                                setPreviewImage(null);
+                            }}
+                            className="p-2.5 rounded-full backdrop-blur-2xl border border-white/[0.1] text-zinc-400 hover:text-white hover:border-white/[0.25] hover:bg-white/10 transition-all duration-300 pointer-events-auto"
+                            style={{ background: 'rgba(42, 42, 42, 0.6)' }}
+                            aria-label="Close Preview"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
+
+                    {/* Image Container */}
+                    <div className="flex-1 w-full flex items-center justify-center overflow-hidden px-4 sm:px-8 py-20 relative">
+                        <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl"
+                            style={{ boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(6, 182, 212, 0.05)' }}>
+                            <img
+                                src={previewImage.url}
+                                alt={previewImage.name}
+                                className="max-w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-4rem)] max-h-[calc(100vh-12rem)] object-contain pointer-events-auto select-none"
+                                style={{ WebkitTouchCallout: 'default' }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Bottom Info Bar */}
+                    <div className="absolute bottom-0 left-0 right-0 z-50 flex justify-center pb-[max(1.25rem,env(safe-area-inset-bottom))] px-4">
+                        <div className="flex items-center gap-3 px-5 py-2.5 rounded-full backdrop-blur-2xl border border-white/[0.1]"
+                            style={{ background: 'rgba(42, 42, 42, 0.6)' }}>
+                            <Download size={13} className="text-zinc-500" />
+                            <span className="text-zinc-400 text-[11px] sm:text-xs font-medium tracking-wide">Long press image to save</span>
+                        </div>
                     </div>
                 </div>
             )}
