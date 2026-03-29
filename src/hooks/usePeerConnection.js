@@ -98,9 +98,13 @@ const initializePeer = () => {
                 if (peerInstance) {
                     peerInstance.destroy();
                     peerInstance = null;
-                    isInitialized = false;
                 }
                 store.clearPersistedData();
+                isInitialized = false;
+                setTimeout(() => {
+                    isInitialized = true;
+                    initializePeer();
+                }, 100);
             }
         } else if (err.type === 'unavailable-id') {
             // This happens if the user reloads the page before the signaling server realizes 
@@ -184,9 +188,13 @@ const handleIncomingData = (data) => {
                 if (peerInstance) {
                     peerInstance.destroy();
                     peerInstance = null;
-                    isInitialized = false;
                 }
                 store.clearPersistedData();
+                isInitialized = false;
+                setTimeout(() => {
+                    isInitialized = true;
+                    initializePeer();
+                }, 100);
             }
             break;
         default:
@@ -254,6 +262,9 @@ export const usePeerConnection = () => {
         const store = useAppStore.getState();
         const conn = store.activeConnection;
 
+        // Clear local state immediately so UI feels instant
+        store.clearPersistedData();
+
         if (conn && conn.open) {
             console.log('[Conn] Sending logout signal and disconnecting manually');
             conn.send({ type: 'SYSTEM', payload: { action: 'LOGOUT' } });
@@ -267,19 +278,24 @@ export const usePeerConnection = () => {
                 if (peerInstance) {
                     peerInstance.destroy();
                     peerInstance = null;
-                    isInitialized = false;
                 }
+                isInitialized = false;
+                setTimeout(() => {
+                    isInitialized = true;
+                    initializePeer();
+                }, 100);
             }, 500);
         } else {
             if (peerInstance) {
                 peerInstance.destroy();
                 peerInstance = null;
-                isInitialized = false;
             }
+            isInitialized = false;
+            setTimeout(() => {
+                isInitialized = true;
+                initializePeer();
+            }, 100);
         }
-        
-        // Clear local state immediately so UI feels instant
-        store.clearPersistedData();
     }, []);
 
     return {
