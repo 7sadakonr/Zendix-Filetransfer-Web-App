@@ -6,4 +6,4 @@ Allow: /
 Disallow: /transfer
 
 # Sitemap
-Sitemap: https://brap-file.vercel.app/sitemap.xml
+Sitemap: https://blap-file.vercel.app/sitemap.xml
