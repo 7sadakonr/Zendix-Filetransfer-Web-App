@@ -1,8 +1,67 @@
 import useAppStore from '../stores/useAppStore';
 import { isMobile } from './platform';
+import { playTransferCompleteSound, getTransferCompletionDelay, markTransferStart } from './playSound';
 
 // In-memory buffer: Map<transferId, { chunks: [], receivedBytes: 0, metadata: {} }>
 const transfers = new Map();
+
+/**
+ * Animate progress from current value to 100% over a duration.
+ */
+const animateProgress = (transferId, duration, currentProgress) => {
+    return new Promise((resolve) => {
+        const store = useAppStore.getState();
+        const startProgress = currentProgress || 90;
+        const startTime = Date.now();
+        const remaining = 100 - startProgress;
+
+        const tick = () => {
+            const elapsed = Date.now() - startTime;
+            const ratio = Math.min(1, elapsed / duration);
+            // Ease-out curve for natural feel
+            const eased = 1 - Math.pow(1 - ratio, 2);
+            const progress = Math.round(startProgress + remaining * eased);
+
+            useAppStore.getState().updateFileTransfer(transferId, { progress });
+
+            if (ratio < 1) {
+                requestAnimationFrame(tick);
+            } else {
+                resolve();
+            }
+        };
+        requestAnimationFrame(tick);
+    });
+};
+
+/**
+ * Finalize a completed transfer: update UI, play sound, trigger download/preview.
+ */
+const finalizeTransfer = (transferId, transfer) => {
+    const store = useAppStore.getState();
+
+    // Mark as completed + play sound
+    store.updateFileTransfer(transferId, { status: 'completed', progress: 100 });
+    playTransferCompleteSound();
+
+    // Auto-download or Preview
+    const blob = new Blob(transfer.chunks, { type: transfer.metadata.fileType });
+    const url = URL.createObjectURL(blob);
+
+    if (isMobile() && transfer.metadata.fileType.startsWith('image/')) {
+        console.log(`[FileReceiver] Image received on mobile, opening preview: ${transfer.metadata.fileName}`);
+        store.setPreviewImage({ url, name: transfer.metadata.fileName });
+    } else {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = transfer.metadata.fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // Cleanup
+    transfers.delete(transferId);
+};
 
 export const handleFileProtocol = (payload) => {
     const { type, transferId } = payload;
@@ -26,19 +85,19 @@ export const handleFileProtocol = (payload) => {
             direction: 'incoming',
             status: 'transferring'
         });
+        markTransferStart(transferId);
     }
     else if (type === 'CHUNK') {
         const transfer = transfers.get(transferId);
         if (!transfer) return;
 
-        const { data, offset } = payload; // data is ArrayBuffer
-        transfer.chunks.push(data); // Inefficient for huge files (seeking), but fine for sequential small/med files
-        // Ideally we sort by offset, but PeerJS data channel usually usually ordered (reliable: true)
+        const { data, offset } = payload;
+        transfer.chunks.push(data);
 
         transfer.receivedBytes += data.byteLength;
 
-        // Optimize: Update UI only every 5%?
-        const progress = Math.min(100, Math.round((transfer.receivedBytes / transfer.metadata.fileSize) * 100));
+        // Cap at 99% during transfer — 100% only on finalize
+        const progress = Math.min(99, Math.round((transfer.receivedBytes / transfer.metadata.fileSize) * 100));
         store.updateFileTransfer(transferId, { progress });
     }
     else if (type === 'COMPLETE') {
@@ -46,25 +105,21 @@ export const handleFileProtocol = (payload) => {
         if (!transfer) return;
 
         console.log(`[FileReceiver] Complete: ${transfer.metadata.fileName}`);
-        store.updateFileTransfer(transferId, { status: 'completed', progress: 100 });
 
-        // Auto-download or Preview
-        const blob = new Blob(transfer.chunks, { type: transfer.metadata.fileType });
-        const url = URL.createObjectURL(blob);
+        // Calculate delay to sync with start sound
+        const delay = getTransferCompletionDelay(transferId);
+        const currentProgress = Math.min(99, Math.round((transfer.receivedBytes / transfer.metadata.fileSize) * 100));
 
-        if (isMobile() && transfer.metadata.fileType.startsWith('image/')) {
-            console.log(`[FileReceiver] Image received on mobile, opening preview: ${transfer.metadata.fileName}`);
-            store.setPreviewImage({ url, name: transfer.metadata.fileName });
+        if (delay > 0) {
+            console.log(`[FileReceiver] Delaying completion by ${delay}ms for sound sync`);
+            // Animate progress bar to 100% during delay, then finalize
+            animateProgress(transferId, delay, currentProgress).then(() => {
+                finalizeTransfer(transferId, transfer);
+            });
         } else {
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = transfer.metadata.fileName;
-            a.click();
-            URL.revokeObjectURL(url);
+            // Enough time has passed — finalize immediately
+            finalizeTransfer(transferId, transfer);
         }
-
-        // Cleanup
-        transfers.delete(transferId);
     }
     else if (type === 'CANCEL') {
         const transfer = transfers.get(transferId);

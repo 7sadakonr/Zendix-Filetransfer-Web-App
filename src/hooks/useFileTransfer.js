@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { usePeerConnection } from './usePeerConnection';
 import { chunkFile, assembleFile } from '../utils/fileChunker';
 import useAppStore from '../stores/useAppStore';
+import { playTransferStartSound, playTransferCompleteSound, getTransferCompletionDelay } from '../utils/playSound';
 
 export const useFileTransfer = () => {
     const { sendData, activeConnection } = usePeerConnection();
@@ -24,6 +25,32 @@ export const useFileTransfer = () => {
         // 3. Update local state
         updateFileTransfer(transferId, { status: 'cancelled' });
     }, [sendData, updateFileTransfer]);
+
+    // Animate progress from current value to 100% over a duration
+    const animateProgressToComplete = useCallback((transferId, duration, currentProgress) => {
+        return new Promise((resolve) => {
+            const startProgress = currentProgress || 90;
+            const startTime = Date.now();
+            const remaining = 100 - startProgress;
+
+            const tick = () => {
+                const elapsed = Date.now() - startTime;
+                const ratio = Math.min(1, elapsed / duration);
+                // Ease-out curve for natural feel
+                const eased = 1 - Math.pow(1 - ratio, 2);
+                const progress = Math.round(startProgress + remaining * eased);
+
+                updateFileTransfer(transferId, { progress });
+
+                if (ratio < 1) {
+                    requestAnimationFrame(tick);
+                } else {
+                    resolve();
+                }
+            };
+            requestAnimationFrame(tick);
+        });
+    }, [updateFileTransfer]);
 
     // Send File
     const sendFile = useCallback(async (file) => {
@@ -63,10 +90,12 @@ export const useFileTransfer = () => {
         });
 
         updateFileTransfer(transferId, { status: 'transferring' });
+        playTransferStartSound(transferId);
 
         // 3. Chunk & Send
         try {
             let sentBytes = 0;
+            let lastProgress = 0;
             // Limit chunk rate to avoid buffer overflow? PeerJS handles it reasonably well usually.
             await chunkFile(file, async (chunkData, offset) => {
                 const chunkIndex = offset; // simplifed
@@ -93,18 +122,29 @@ export const useFileTransfer = () => {
                 });
 
                 sentBytes += chunkData.byteLength;
-                const progress = Math.min(100, Math.round((sentBytes / file.size) * 100));
+                lastProgress = Math.min(99, Math.round((sentBytes / file.size) * 100));
 
-                updateFileTransfer(transferId, { progress });
+                updateFileTransfer(transferId, { progress: lastProgress });
             });
 
-            // 4. Send Complete
+            // 4. Send Complete signal immediately (peer gets it right away)
             sendData('FILE', {
                 type: 'COMPLETE',
                 transferId
             });
 
+            // 5. Delay UI completion to sync with sounds
+            const delay = getTransferCompletionDelay(transferId);
+
+            if (delay > 0) {
+                console.log(`[File] Delaying completion UI by ${delay}ms for sound sync`);
+                // Animate progress bar to 100% during the delay
+                await animateProgressToComplete(transferId, delay, lastProgress);
+            }
+
+            // 6. Now show completed state + play sound together
             updateFileTransfer(transferId, { status: 'completed', progress: 100 });
+            playTransferCompleteSound();
             console.log(`[File] Transfer complete: ${file.name}`);
 
         } catch (err) {
