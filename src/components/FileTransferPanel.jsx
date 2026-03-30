@@ -2,20 +2,17 @@ import { Upload, File, Download, CheckCircle, AlertCircle, X } from 'lucide-reac
 import { useCallback } from 'react';
 import { useFileTransfer } from '../hooks/useFileTransfer';
 import { usePeerConnection } from '../hooks/usePeerConnection';
+import { getFilesFromFileList } from '../utils/fileCollection';
 import clsx from 'clsx';
 
 const FileTransferPanel = () => {
-    const { sendFile, cancelTransfer, fileTransfers } = useFileTransfer();
+    const { sendFiles, cancelTransfer, fileTransfers } = useFileTransfer();
     const { connectionStatus } = usePeerConnection();
 
     const handleFileSelect = useCallback((e) => {
-        const files = e.target.files;
-        if (files && files.length > 0) {
-            for (let i = 0; i < files.length; i++) {
-                sendFile(files[i]);
-            }
-        }
-    }, [sendFile]);
+        sendFiles(getFilesFromFileList(e.target.files));
+        e.target.value = null;
+    }, [sendFiles]);
 
     return (
         <div className="flex-1 flex flex-col items-center gap-6 w-full">

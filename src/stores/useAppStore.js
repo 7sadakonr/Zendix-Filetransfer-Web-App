@@ -58,6 +58,9 @@ const useAppStore = create(
                     if (ft.blobUrl) {
                         URL.revokeObjectURL(ft.blobUrl);
                     }
+                    if (ft.previewUrl && ft.previewUrl !== ft.blobUrl) {
+                        URL.revokeObjectURL(ft.previewUrl);
+                    }
                 });
                 return {
                     myPeerId: null,

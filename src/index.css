@@ -32,6 +32,21 @@ body {
   min-height: 100vh;
 }
 
+@media (max-width: 767px) {
+  html.transfer-page-lock,
+  body.transfer-page-lock {
+    width: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body.transfer-page-lock #root {
+    height: 100dvh;
+    overflow: hidden;
+  }
+}
+
 @keyframes liquidFloat {
   0% {
     transform: translate3d(-14%, -10%, 0) scale(0.92);
@@ -86,6 +101,38 @@ body {
   }
   100% {
     background-position: -200% 0;
+  }
+}
+
+@keyframes liquidGlassSweep {
+  0% {
+    transform: translateX(-130%) skewX(-14deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.85;
+  }
+  60% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translateX(135%) skewX(-14deg);
+    opacity: 0;
+  }
+}
+
+@keyframes liquidGlassDrift {
+  0% {
+    transform: translate3d(-18%, -8%, 0) scale(0.94);
+  }
+  33% {
+    transform: translate3d(16%, 10%, 0) scale(1.04);
+  }
+  66% {
+    transform: translate3d(6%, -14%, 0) scale(0.98);
+  }
+  100% {
+    transform: translate3d(-18%, -8%, 0) scale(0.94);
   }
 }
 
@@ -194,6 +241,44 @@ body {
   );
   background-size: 200% 100%;
   animation: shimmerTrack 1.8s linear infinite;
+}
+
+.loading-card-shimmer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background-image: linear-gradient(
+    135deg,
+    rgba(78, 78, 78, 0.82) 0%,
+    rgba(64, 64, 64, 0.76) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+}
+
+.loading-card-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  border-radius: inherit;
+  transform: translateX(-130%) skewX(-16deg);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(170, 170, 170, 0.04) 20%,
+    rgba(210, 210, 210, 0.16) 46%,
+    rgba(130, 130, 130, 0.14) 56%,
+    rgba(170, 170, 170, 0.05) 72%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  filter: blur(12px);
+  animation: liquidGlassSweep 1.9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  pointer-events: none;
+}
+
+.loading-card-shimmer-delay::after {
+  animation-delay: 0.28s;
 }
 
 .toast-card-enter {
