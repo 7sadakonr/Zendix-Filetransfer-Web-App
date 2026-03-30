@@ -50,7 +50,7 @@ export const useClipboardSync = () => {
         }
     }, [sendData]);
 
-    // 2. Receiving: Peer -> Local Write (with fallback)
+    // 2. Receiving: Peer -> Local prompt before writing
     useEffect(() => {
         if (!lastReceivedClipboard) return;
 
@@ -60,9 +60,9 @@ export const useClipboardSync = () => {
             return;
         }
 
-        const attemptWrite = async () => {
-            const { text, fromDevice, id } = lastReceivedClipboard;
-            console.log("New clipboard item received, attempting write:", text);
+        const queuePendingCopy = () => {
+            const { text, id } = lastReceivedClipboard;
+            console.log("New clipboard item received, waiting for confirmation:", text);
 
             // Mark this ID as processed
             processedClipboardIds.current.add(id);
@@ -73,20 +73,10 @@ export const useClipboardSync = () => {
                 processedClipboardIds.current = new Set(idsArray.slice(-50));
             }
 
-            try {
-                // Try to write immediately
-                await clipboard.writeText(text);
-                console.log("Auto-write to clipboard successful!");
-                setCopySuccess(true);
-                setTimeout(() => setCopySuccess(false), 2000);
-            } catch (err) {
-                console.warn("Auto-write failed (expected on iOS Safari/Firefox without gesture):", err);
-                // Fallback: Show UI to tap
-                setPendingClipboardItem(lastReceivedClipboard);
-            }
+            setPendingClipboardItem(lastReceivedClipboard);
         };
 
-        attemptWrite();
+        queuePendingCopy();
 
         // Reset trigger? No, we just react when it *changes*
         // But if we receive the *same* reference object it won't trigger. 

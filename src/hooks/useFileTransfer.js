@@ -5,7 +5,7 @@ import useAppStore from '../stores/useAppStore';
 import { playTransferStartSound, playTransferCompleteSound, getTransferCompletionDelay } from '../utils/playSound';
 
 export const useFileTransfer = () => {
-    const { sendData, activeConnection } = usePeerConnection();
+    const { sendData, activeConnections } = usePeerConnection();
     const { addFileTransfer, updateFileTransfer, fileTransfers } = useAppStore();
 
     // In-memory buffer for receiving files (Map<transferId, Array<chunks>>)
@@ -56,7 +56,7 @@ export const useFileTransfer = () => {
     const sendFile = useCallback(async (file) => {
         console.log('[File] Selected:', file.name, 'Size:', file.size, 'Type:', file.type);
 
-        if (!activeConnection) {
+        if (!activeConnections || activeConnections.length === 0) {
             console.warn('[File] No active connection, cannot send');
             return;
         }
@@ -101,12 +101,22 @@ export const useFileTransfer = () => {
                 const chunkIndex = offset; // simplifed
 
                 // Backpressure / Flow Control
-                if (activeConnection?.dataChannel) {
+                if (activeConnections && activeConnections.length > 0) {
                     // Buffer up to 1MB to prevent SCTP buffer overflow on some browsers
                     const MAX_BUFFER = 1 * 1024 * 1024; // 1MB
+                    let isReady = false;
 
-                    while (activeConnection.dataChannel.bufferedAmount > MAX_BUFFER) {
-                        await new Promise(r => setTimeout(r, 10)); // wait slightly longer to let buffer drain
+                    while (!isReady) {
+                        isReady = true;
+                        for (const conn of activeConnections) {
+                            if (conn.dataChannel && conn.dataChannel.bufferedAmount > MAX_BUFFER) {
+                                isReady = false;
+                                break;
+                            }
+                        }
+                        if (!isReady) {
+                            await new Promise(r => setTimeout(r, 10)); // wait slightly longer to let buffer drain
+                        }
                     }
                 }
                 // Yield occasionally to prevent UI freezes
@@ -152,7 +162,7 @@ export const useFileTransfer = () => {
             updateFileTransfer(transferId, { status: 'error' });
         }
 
-    }, [activeConnection, sendData, addFileTransfer, updateFileTransfer]);
+    }, [activeConnections, sendData, addFileTransfer, updateFileTransfer]);
 
 
     // Receive Logic is tricky because `usePeerConnection` handles the listeners.

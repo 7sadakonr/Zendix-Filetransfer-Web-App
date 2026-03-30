@@ -89,23 +89,9 @@ const initializePeer = () => {
         const store = useAppStore.getState();
         
         if (err.type === 'peer-unavailable') {
-            // If we already have a remotePeerId saved, it means we were trying an auto-reconnect 
-            // after being disconnected (e.g. waking up from background). 
-            // If the peer is unavailable now, they likely clicked Logout while we were asleep.
-            // We must destroy our session so we don't get stuck in 'Reconnecting...' forever.
-            if (store.remotePeerId) {
-                console.log('[Peer] Stored remote peer not found. They logged out. Forcing local logout.');
-                if (peerInstance) {
-                    peerInstance.destroy();
-                    peerInstance = null;
-                }
-                store.clearPersistedData();
-                isInitialized = false;
-                setTimeout(() => {
-                    isInitialized = true;
-                    initializePeer();
-                }, 100);
-            }
+            // Note: In multi-device, if one peer is unavailable, we shouldn't force local logout.
+            // We just let the connection fail gracefully.
+            console.warn('[Peer] A remote peer is unavailable.');
         } else if (err.type === 'unavailable-id') {
             // This happens if the user reloads the page before the signaling server realizes 
             // they disconnected. In this case, their "saved" myPeerId from localStorage is 
@@ -129,6 +115,8 @@ const initializePeer = () => {
     return peerInstance;
 };
 
+const MAX_PEERS = 3;
+
 const setupConnectionHandlers = (conn, timeoutRef) => {
     const store = useAppStore.getState();
 
@@ -137,10 +125,34 @@ const setupConnectionHandlers = (conn, timeoutRef) => {
             clearTimeout(timeoutRef.current);
             timeoutRef.current = null;
         }
+
+        const currentStore = useAppStore.getState();
+        
+        // --- Limit Check ---
+        if (currentStore.activeConnections.length >= MAX_PEERS) {
+            console.log('[Conn] Room is full. Rejecting peer:', conn.peer);
+            conn.send({ type: 'SYSTEM', payload: { action: 'REJECT_FULL' } });
+            setTimeout(() => {
+                try { conn.close(); } catch (e) { }
+            }, 500);
+            return;
+        }
+
         console.log('[Conn] Opened with:', conn.peer);
-        useAppStore.getState().setConnectionStatus('connected');
-        useAppStore.getState().setActiveConnection(conn);
-        useAppStore.getState().setRemotePeerId(conn.peer);
+        useAppStore.getState().addConnection(conn);
+
+        // --- Full Mesh: Broadcast Peer List ---
+        // Need fresh state after addConnection
+        const newStore = useAppStore.getState();
+        const activeConns = newStore.activeConnections;
+        const allPeerIds = [newStore.myPeerId, ...activeConns.map(c => c.peer)];
+        const uniquePeerIds = [...new Set(allPeerIds)];
+
+        activeConns.forEach(c => {
+            if (c.open) {
+                c.send({ type: 'SYSTEM', payload: { action: 'SYNC_PEERS', peers: uniquePeerIds } });
+            }
+        });
     });
 
     conn.on('data', (data) => {
@@ -149,12 +161,7 @@ const setupConnectionHandlers = (conn, timeoutRef) => {
 
     conn.on('close', () => {
         console.log('[Conn] Closed:', conn.peer);
-        const currentConn = useAppStore.getState().activeConnection;
-        if (currentConn?.peer === conn.peer) {
-            useAppStore.getState().setConnectionStatus('disconnected');
-            useAppStore.getState().setActiveConnection(null);
-            // We DO NOT clear remotePeerId here, so the UI knows we *were* connected and can auto-reconnect
-        }
+        useAppStore.getState().removeConnection(conn.peer);
     });
 
     conn.on('error', (err) => {
@@ -195,6 +202,35 @@ const handleIncomingData = (data) => {
                     isInitialized = true;
                     initializePeer();
                 }, 100);
+            } else if (data.payload?.action === 'REJECT_FULL') {
+                console.warn('[System] Connection rejected: Room is full.');
+                alert('ห้องเต็มแล้ว (จำกัดการส่งเป็นกลุ่มสูงสุด 3 เครื่อง) ❌');
+                store.removeConnection(data.payload.peer || "unknown");
+            } else if (data.payload?.action === 'SYNC_PEERS') {
+                const receivedPeers = data.payload?.peers || [];
+                const localId = store.myPeerId;
+
+                receivedPeers.forEach(targetId => {
+                    // Do not connect to self
+                    if (targetId === localId) return;
+
+                    // Do not connect if already connected
+                    if (useAppStore.getState().activeConnections.some(c => c.peer === targetId)) return;
+
+                    // To prevent duplicate connections simultaneously
+                    // only the peer with the lexicographically smaller ID initiates
+                    if (localId < targetId) {
+                        console.log('[Mesh] Discovered new peer via SYNC, initiating connection:', targetId);
+                        
+                        // Check limit locally too
+                        if (peerInstance && !peerInstance.destroyed) {
+                            if (useAppStore.getState().activeConnections.length < MAX_PEERS) {
+                                const newConn = peerInstance.connect(targetId, { reliable: true });
+                                setupConnectionHandlers(newConn, { current: null });
+                            }
+                        }
+                    }
+                });
             }
             break;
         default:
@@ -207,8 +243,8 @@ export const usePeerConnection = () => {
     const {
         connectionStatus,
         myPeerId,
-        activeConnection,
-        setConnectionStatus
+        activeConnections,
+        remotePeerIds
     } = useAppStore();
 
     // Initialize peer on first hook usage (once globally)
@@ -225,14 +261,21 @@ export const usePeerConnection = () => {
             return;
         }
 
-        const currentStatus = useAppStore.getState().connectionStatus;
-        if (currentStatus === 'connected') {
-            console.warn('[Conn] Already connected');
+        const store = useAppStore.getState();
+        if (store.activeConnections.some(c => c.peer === peerId)) {
+            console.warn('[Conn] Already connected to this peer');
+            return;
+        }
+
+        if (store.activeConnections.length >= MAX_PEERS) {
+            alert('ลีมิตถึงจำนวนสูงสุดแล้ว ไม่สามารถเชื่อมต่อเพิ่มได้ (สูงสุด 3 เครื่อง) ❌');
             return;
         }
 
         console.log('[Conn] Initiating connection to:', peerId);
-        useAppStore.getState().setConnectionStatus('connecting');
+        if (store.activeConnections.length === 0) {
+            useAppStore.getState().setConnectionStatus('connecting');
+        }
 
         const conn = peerInstance.connect(peerId, { reliable: true });
         
@@ -250,9 +293,13 @@ export const usePeerConnection = () => {
     }, []);
 
     const sendData = useCallback((type, payload) => {
-        const conn = useAppStore.getState().activeConnection;
-        if (conn && conn.open) {
-            conn.send({ type, payload });
+        const conns = useAppStore.getState().activeConnections;
+        if (conns.length > 0) {
+            conns.forEach(conn => {
+                if (conn.open) {
+                    conn.send({ type, payload });
+                }
+            });
         } else {
             console.warn('[Conn] Cannot send, not connected');
         }
@@ -260,19 +307,23 @@ export const usePeerConnection = () => {
 
     const manualDisconnect = useCallback(() => {
         const store = useAppStore.getState();
-        const conn = store.activeConnection;
+        const conns = [...store.activeConnections];
 
         // Clear local state immediately so UI feels instant
         store.clearPersistedData();
 
-        if (conn && conn.open) {
+        if (conns.length > 0) {
             console.log('[Conn] Sending logout signal and disconnecting manually');
-            conn.send({ type: 'SYSTEM', payload: { action: 'LOGOUT' } });
+            conns.forEach(conn => {
+                if (conn.open) {
+                    conn.send({ type: 'SYSTEM', payload: { action: 'LOGOUT' } });
+                }
+            });
             
             // Give WebRTC enough time to flush the buffer across the internet before destroying everything
             setTimeout(() => {
                 try {
-                    conn.close();
+                    conns.forEach(conn => conn.close());
                 } catch (e) { console.error('Error closing connection:', e); }
                 
                 if (peerInstance) {
@@ -301,7 +352,8 @@ export const usePeerConnection = () => {
     return {
         connectionStatus,
         myPeerId,
-        activeConnection,
+        activeConnections,
+        remotePeerIds,
         connectToPeer,
         disconnectPeer: manualDisconnect,
         sendData

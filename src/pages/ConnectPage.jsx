@@ -10,7 +10,7 @@ import Logo from '../assets/img/blap-logo-full.png';
 const ConnectPage = () => {
     const navigate = useNavigate();
     const { connectToPeer } = usePeerConnection();
-    const { myPeerId, connectionStatus, remotePeerId } = useAppStore();
+    const { myPeerId, connectionStatus, remotePeerIds } = useAppStore();
 
     const [showScanner, setShowScanner] = useState(false);
     const [remoteIdInput, setRemoteIdInput] = useState('');
@@ -39,11 +39,11 @@ const ConnectPage = () => {
     useEffect(() => {
         if (connectionStatus === 'connected') {
             setTimeout(() => navigate('/transfer'), 1000);
-        } else if (remotePeerId) {
+        } else if (remotePeerIds && remotePeerIds.length > 0) {
             // Auto redirect to transfer page to attempt reconnection
             navigate('/transfer');
         }
-    }, [connectionStatus, remotePeerId, navigate]);
+    }, [connectionStatus, remotePeerIds, navigate]);
 
     const copyMyId = () => {
         if (myPeerId) {
@@ -302,7 +302,9 @@ const ConnectPage = () => {
                             style={{ background: 'rgba(16, 185, 129, 0.1)', backdropFilter: 'blur(8px)' }}>
                             <p className="text-emerald-400 font-semibold mb-1 sm:mb-2 flex items-center justify-center gap-1 text-xs">
                                 <Check size={12} />
-                                Connected to {getDeviceName(remotePeerId)}
+                                {remotePeerIds.length > 1 
+                                    ? `Connected to ${remotePeerIds.length} peers` 
+                                    : `Connected to ${getDeviceName(remotePeerIds[0])}`}
                             </p>
                             <button
                                 onClick={() => navigate('/transfer')}

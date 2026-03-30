@@ -3,7 +3,7 @@ import useAppStore from '../stores/useAppStore';
 import clsx from 'clsx';
 
 const StatusIndicator = () => {
-    const { connectionStatus, remotePeerId } = useAppStore();
+    const { connectionStatus } = useAppStore();
 
     const isConnected = connectionStatus === 'connected';
     const isConnecting = connectionStatus === 'connecting';
