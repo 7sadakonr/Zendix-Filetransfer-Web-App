@@ -12,7 +12,7 @@ import clsx from 'clsx';
 const TransferPage = () => {
     const navigate = useNavigate();
     const { sendData, disconnectPeer, connectToPeer } = usePeerConnection();
-    const { connectionStatus, remotePeerId, clipboardHistory, myPeerId, previewImage, setPreviewImage } = useAppStore();
+    const { connectionStatus, remotePeerIds, clipboardHistory, myPeerId, previewImage, setPreviewImage } = useAppStore();
     const { pendingClipboardItem, confirmPendingCopy, clearPending, copySuccess } = useClipboardSync();
     const { sendFile, fileTransfers } = useFileTransfer();
 
@@ -31,26 +31,25 @@ const TransferPage = () => {
     // Auto-reconnect or Redirect
     useEffect(() => {
         if (connectionStatus === 'disconnected') {
-            if (remotePeerId) {
-                // If we have a stored partner but are disconnected, try to reconnect
-                console.log('[TransferPage] Attempting auto-reconnect to:', remotePeerId);
-                // add a small delay to avoid spamming the signaling server immediately on wake
+            if (remotePeerIds && remotePeerIds.length > 0) {
+                console.log('[TransferPage] Attempting auto-reconnect to:', remotePeerIds[0]);
                 const timer = setTimeout(() => {
-                    useAppStore.getState().setConnectionStatus('connecting'); // optimistic UI update
-                    connectToPeer(remotePeerId);
+                    useAppStore.getState().setConnectionStatus('connecting'); 
+                    // Auto-reconnect to the primary (first) peer for simplicity on reload
+                    connectToPeer(remotePeerIds[0]);
                 }, 1500);
                 return () => clearTimeout(timer);
             } else {
-                // Not connected and no stored session -> go home
                 navigate('/');
             }
         }
-    }, [connectionStatus, remotePeerId, navigate, connectToPeer]);
+    }, [connectionStatus, remotePeerIds, navigate, connectToPeer]);
 
-    // Get device name from peer ID
-    const getFriendlyName = (peerId) => {
-        if (!peerId) return 'Unknown';
-        return peerId;
+    // Get friendly name
+    const getFriendlyName = () => {
+        if (!remotePeerIds || remotePeerIds.length === 0) return 'Unknown';
+        if (remotePeerIds.length > 1) return `${remotePeerIds.length} peers connected`;
+        return remotePeerIds[0];
     };
 
     const handleSendText = () => {
@@ -388,7 +387,7 @@ const TransferPage = () => {
                                 "text-sm",
                                 connectionStatus === 'connected' ? "text-zinc-400" : "text-amber-500/80"
                             )}>
-                                {connectionStatus === 'connected' ? getFriendlyName(remotePeerId) : 'Waiting'}
+                                {connectionStatus === 'connected' ? getFriendlyName() : 'Waiting'}
                             </span>
                         </div>
                     </div>
@@ -410,22 +409,34 @@ const TransferPage = () => {
                                         <div className="flex items-center gap-2">
                                             <span className={clsx(
                                                 "px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider",
-                                                item.fromDevice === 'THIS DEVICE'
+                                                (item.fromDevice === 'THIS DEVICE' || item.direction === 'outgoing')
                                                     ? "bg-zinc-700 text-zinc-300"
                                                     : "bg-cyan-500/20 text-cyan-400"
                                             )}>
-                                                {item.fromDevice === 'THIS DEVICE' ? 'THIS DEVICE' : 'PEER'}
+                                                {(item.fromDevice === 'THIS DEVICE' || item.direction === 'outgoing') ? 'THIS DEVICE' : 'PEER'}
                                             </span>
                                             <span className="text-zinc-600 text-xs">
-                                                {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                                {new Date(item.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
                                             </span>
                                         </div>
-                                        <button
-                                            onClick={() => handleCopyItem(item)}
-                                            className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-all"
-                                        >
-                                            {copiedId === item.id ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
-                                        </button>
+                                        {item.type === 'clipboard' ? (
+                                            <button
+                                                onClick={() => handleCopyItem(item)}
+                                                className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-all"
+                                            >
+                                                {copiedId === item.id ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                                            </button>
+                                        ) : item.blobUrl ? (
+                                            <a
+                                                href={item.blobUrl}
+                                                download={item.fileName}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="p-1.5 rounded-lg text-zinc-500 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all"
+                                                title="Save File"
+                                            >
+                                                <Download size={14} />
+                                            </a>
+                                        ) : null}
                                     </div>
 
                                     {/* Content */}
@@ -499,7 +510,7 @@ const TransferPage = () => {
 
             {copySuccess && (
                 <div className="fixed top-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-emerald-500 text-white text-sm font-semibold rounded-full shadow-xl z-50">
-                    Sent Successfully!
+                    Copied to this device
                 </div>
             )}
 

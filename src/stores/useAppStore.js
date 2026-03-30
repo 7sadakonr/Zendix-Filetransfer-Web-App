@@ -10,11 +10,23 @@ const useAppStore = create(
 
             // Connection
             connectionStatus: 'disconnected', // disconnected, connecting, connected
-            remotePeerId: null,
-            activeConnection: null, // PeerJS connection object
+            remotePeerIds: [],
+            activeConnections: [], // list of active PeerJS connection objects
             setConnectionStatus: (status) => set({ connectionStatus: status }),
-            setRemotePeerId: (id) => set({ remotePeerId: id }),
-            setActiveConnection: (conn) => set({ activeConnection: conn }),
+            addConnection: (conn) => set((state) => ({
+                activeConnections: [...state.activeConnections.filter(c => c.peer !== conn.peer), conn],
+                remotePeerIds: [...new Set([...state.remotePeerIds, conn.peer])],
+                connectionStatus: 'connected'
+            })),
+            removeConnection: (peerId) => set((state) => {
+                const newConnections = state.activeConnections.filter(c => c.peer !== peerId);
+                const newPeerIds = state.remotePeerIds.filter(id => id !== peerId);
+                return {
+                    activeConnections: newConnections,
+                    remotePeerIds: newPeerIds,
+                    connectionStatus: newConnections.length > 0 ? 'connected' : 'disconnected'
+                };
+            }),
 
             // Clipboard
             clipboardHistory: [],
@@ -40,21 +52,30 @@ const useAppStore = create(
             setPreviewImage: (preview) => set({ previewImage: preview }),
 
             // Logout / Clear state
-            clearPersistedData: () => set({
-                myPeerId: null,
-                remotePeerId: null,
-                clipboardHistory: [],
-                fileTransfers: [],
-                connectionStatus: 'disconnected',
-                activeTab: 'clipboard',
-                lastReceivedClipboard: null
-            })
+            clearPersistedData: () => set((state) => {
+                // Free memory for downloaded files
+                state.fileTransfers.forEach(ft => {
+                    if (ft.blobUrl) {
+                        URL.revokeObjectURL(ft.blobUrl);
+                    }
+                });
+                return {
+                    myPeerId: null,
+                    remotePeerIds: [],
+                    activeConnections: [],
+                    clipboardHistory: [],
+                    fileTransfers: [],
+                    connectionStatus: 'disconnected',
+                    activeTab: 'clipboard',
+                    lastReceivedClipboard: null
+                };
+            }),
         }),
         {
             name: 'blap-storage', // key in localStorage
             partialize: (state) => ({
                 myPeerId: state.myPeerId,
-                remotePeerId: state.remotePeerId,
+                remotePeerIds: state.remotePeerIds || (state.remotePeerId ? [state.remotePeerId] : []),
                 clipboardHistory: state.clipboardHistory,
                 fileTransfers: state.fileTransfers,
             }), // Only save these fields

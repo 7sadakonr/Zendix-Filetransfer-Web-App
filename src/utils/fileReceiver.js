@@ -40,23 +40,20 @@ const animateProgress = (transferId, duration, currentProgress) => {
 const finalizeTransfer = (transferId, transfer) => {
     const store = useAppStore.getState();
 
-    // Mark as completed + play sound
-    store.updateFileTransfer(transferId, { status: 'completed', progress: 100 });
-    playTransferCompleteSound();
-
-    // Auto-download or Preview
     const blob = new Blob(transfer.chunks, { type: transfer.metadata.fileType });
     const url = URL.createObjectURL(blob);
 
+    // Mark as completed + play sound + Save url
+    store.updateFileTransfer(transferId, { status: 'completed', progress: 100, blobUrl: url });
+    playTransferCompleteSound();
+
+    // Optional Auto-Preview for Mobile Images (Since saving images natively on iOS often requires long-press)
     if (isMobile() && transfer.metadata.fileType.startsWith('image/')) {
         console.log(`[FileReceiver] Image received on mobile, opening preview: ${transfer.metadata.fileName}`);
         store.setPreviewImage({ url, name: transfer.metadata.fileName });
     } else {
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = transfer.metadata.fileName;
-        a.click();
-        URL.revokeObjectURL(url);
+        console.log(`[FileReceiver] File received: ${transfer.metadata.fileName}. Waiting for user manual download.`);
+        // Removed auto-download. User must click the download button on the file UI to save it.
     }
 
     // Cleanup
