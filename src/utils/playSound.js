@@ -1,5 +1,5 @@
-import startSoundUrl from '../assets/sound/start.mp3';
-import completeSoundUrl from '../assets/sound/end.mp3';
+import startSoundUrl from '../assets/sound/Start.mp3';
+import completeSoundUrl from '../assets/sound/End.mp3';
 
 // Uses bundled audio assets so updated files get fresh hashed URLs.
 // Web Audio API keeps playback more reliable on mobile.
