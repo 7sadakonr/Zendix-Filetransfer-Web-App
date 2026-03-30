@@ -5,8 +5,10 @@ import useAppStore from '../stores/useAppStore';
 import { useClipboardSync } from '../hooks/useClipboardSync';
 import { useFileTransfer } from '../hooks/useFileTransfer';
 import { getDeviceName } from '../utils/platform';
+import { getFilesFromDataTransfer, getFilesFromFileList } from '../utils/fileCollection';
 import ClipboardToast from '../components/ClipboardToast';
-import { Clipboard, FileText, Copy, Check, Send, Lock, Upload, File, X, LogOut, Download, Image } from 'lucide-react';
+import { Clipboard, FileText, Copy, Check, Send, Upload, File, X, LogOut, Download, Image } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import clsx from 'clsx';
 
 const TransferPage = () => {
@@ -14,15 +16,43 @@ const TransferPage = () => {
     const { sendData, disconnectPeer, connectToPeer } = usePeerConnection();
     const { connectionStatus, remotePeerIds, clipboardHistory, myPeerId, previewImage, setPreviewImage } = useAppStore();
     const { pendingClipboardItem, confirmPendingCopy, clearPending, copySuccess } = useClipboardSync();
-    const { sendFile, fileTransfers } = useFileTransfer();
+    const { sendFile, sendFiles, fileTransfers } = useFileTransfer();
 
     const [activeTab, setActiveTab] = useState('clipboard');
     const [textInput, setTextInput] = useState('');
     const [copiedId, setCopiedId] = useState(null);
     const [isDraggingOver, setIsDraggingOver] = useState(false);
     const [expandedItems, setExpandedItems] = useState({});
+    const [showConnectInfo, setShowConnectInfo] = useState(false);
+    const [peerIdCopied, setPeerIdCopied] = useState(false);
     const textareaRef = useRef(null);
     const touchStartY = useRef(null);
+    const fileInputRef = useRef(null);
+    const folderInputRef = useRef(null);
+
+    useEffect(() => {
+        const folderInput = folderInputRef.current;
+        if (!folderInput) return;
+
+        // Some browsers only honor directory picking when the attribute
+        // exists on the live DOM node, not just in JSX props.
+        folderInput.setAttribute('webkitdirectory', '');
+        folderInput.setAttribute('directory', '');
+        folderInput.setAttribute('mozdirectory', '');
+    }, []);
+
+    useEffect(() => {
+        const isMobileViewport = window.matchMedia('(max-width: 767px)').matches;
+        if (!isMobileViewport) return;
+
+        document.documentElement.classList.add('transfer-page-lock');
+        document.body.classList.add('transfer-page-lock');
+
+        return () => {
+            document.documentElement.classList.remove('transfer-page-lock');
+            document.body.classList.remove('transfer-page-lock');
+        };
+    }, []);
 
     const toggleExpand = (id) => {
         setExpandedItems(prev => ({ ...prev, [id]: !prev[id] }));
@@ -134,13 +164,31 @@ const TransferPage = () => {
         }
     };
 
-    const handleFileSelect = (e) => {
-        const files = e.target.files;
-        if (files && files.length > 0) {
-            for (let i = 0; i < files.length; i++) {
-                sendFile(files[i]);
-            }
+    const handlePreviewFile = (item) => {
+        if (!item?.previewUrl || !item?.fileType?.startsWith('image/')) return;
+        setPreviewImage({ url: item.previewUrl, name: item.fileName });
+    };
+
+    const handleCopyPeerId = async () => {
+        if (!myPeerId) return;
+
+        try {
+            await navigator.clipboard.writeText(myPeerId);
+            setPeerIdCopied(true);
+            setTimeout(() => setPeerIdCopied(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy peer ID:', err);
         }
+    };
+
+    const handleFileSelect = (e) => {
+        sendFiles(getFilesFromFileList(e.target.files));
+        e.target.value = '';
+    };
+
+    const handleFolderSelect = (e) => {
+        sendFiles(getFilesFromFileList(e.target.files));
+        e.target.value = '';
     };
 
     const handleDragOver = (e) => {
@@ -156,18 +204,14 @@ const TransferPage = () => {
         setIsDraggingOver(false);
     };
 
-    const handleDrop = (e) => {
+    const handleDrop = async (e) => {
         e.preventDefault();
         e.stopPropagation();
         setIsDraggingOver(false);
         if (connectionStatus !== 'connected') return;
 
-        const files = e.dataTransfer.files;
-        if (files && files.length > 0) {
-            for (let i = 0; i < files.length; i++) {
-                sendFile(files[i]);
-            }
-        }
+        const files = await getFilesFromDataTransfer(e.dataTransfer);
+        sendFiles(files);
     };
 
     // Combine clipboard history and file transfers
@@ -175,6 +219,9 @@ const TransferPage = () => {
         ...clipboardHistory.map(item => ({ ...item, type: 'clipboard' })),
         ...fileTransfers.map(item => ({ ...item, type: 'file' }))
     ].sort((a, b) => b.timestamp - a.timestamp);
+    const connectQrUrl = myPeerId
+        ? `${window.location.protocol}//${window.location.host}/?connect=${myPeerId}`
+        : '';
 
     return (
         <main aria-label="Blap - Transfer files and clipboard" className="fixed inset-0 flex flex-col md:flex-row md:items-center md:justify-center px-4 sm:px-6 lg:px-8 pt-[calc(1rem+env(safe-area-inset-top))] sm:pt-[calc(1.5rem+env(safe-area-inset-top))] lg:pt-[calc(2rem+env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:pb-[max(2rem,env(safe-area-inset-bottom))] font-['Inter'] overflow-hidden">
@@ -269,10 +316,8 @@ const TransferPage = () => {
                                         let hasFile = false;
 
                                         if (files && files.length > 0) {
-                                            for (let i = 0; i < files.length; i++) {
-                                                sendFile(files[i]);
-                                                hasFile = true;
-                                            }
+                                            sendFiles(getFilesFromFileList(files));
+                                            hasFile = true;
                                         } else if (items) {
                                             for (let i = 0; i < items.length; i++) {
                                                 const item = items[i];
@@ -306,12 +351,17 @@ const TransferPage = () => {
                             </div>
                         ) : (
                             <div className="flex-1 flex flex-col items-center justify-center min-h-0">
-                                <label
+                                <div
                                     onDragOver={handleDragOver}
                                     onDragLeave={handleDragLeave}
                                     onDrop={handleDrop}
+                                    onClick={(e) => {
+                                        if (e.target === e.currentTarget && connectionStatus === 'connected') {
+                                            fileInputRef.current?.click();
+                                        }
+                                    }}
                                     className={clsx(
-                                        "relative flex flex-col items-center justify-center w-full h-full min-h-[150px] rounded-2xl border-2 transition-all cursor-pointer group/drop",
+                                        "relative flex flex-col items-center justify-center w-full h-full min-h-[150px] rounded-2xl border-2 transition-all cursor-pointer group/drop px-6",
                                         connectionStatus === 'connected'
                                             ? isDraggingOver
                                                 ? "border-cyan-400 bg-cyan-500/20 border-solid shadow-[0_0_15px_rgba(34,211,238,0.3)]"
@@ -319,18 +369,29 @@ const TransferPage = () => {
                                             : "border-white/10 border-dashed opacity-50 cursor-not-allowed"
                                     )}>
                                     <Upload size={40} className={clsx("mb-3 transition-colors", isDraggingOver ? "text-cyan-400 scale-110" : "text-zinc-500 group-hover/drop:text-cyan-400")} />
-                                    <p className={clsx("text-sm font-medium mb-1", isDraggingOver ? "text-cyan-300" : "text-zinc-400")}>
-                                        {connectionStatus === 'connected' ? (isDraggingOver ? "Drop files now!" : "Click or drag files here") : "Reconnecting to send files..."}
+                                    <p className={clsx("text-sm font-medium mb-1 text-center", isDraggingOver ? "text-cyan-300" : "text-zinc-400")}>
+                                        {connectionStatus === 'connected' ? (isDraggingOver ? "Drop files or folders now!" : "Click, drag files, or drop a folder here") : "Reconnecting to send files..."}
                                     </p>
-                                    <p className="text-zinc-600 text-xs">Max size: 100MB</p>
+                                    <p className="text-zinc-600 text-xs text-center">Files are sent one by one automatically. Folder contents keep their relative path labels.</p>
                                     <input
+                                        ref={fileInputRef}
                                         type="file"
                                         className="hidden"
                                         onChange={handleFileSelect}
                                         disabled={connectionStatus !== 'connected'}
                                         multiple
                                     />
-                                </label>
+                                    <input
+                                        ref={folderInputRef}
+                                        type="file"
+                                        className="hidden"
+                                        onChange={handleFolderSelect}
+                                        disabled={connectionStatus !== 'connected'}
+                                        webkitdirectory=""
+                                        directory=""
+                                        multiple
+                                    />
+                                </div>
                             </div>
                         )}
                     </div>
@@ -383,12 +444,19 @@ const TransferPage = () => {
                                 "w-2 h-2 rounded-full",
                                 connectionStatus === 'connected' ? "bg-emerald-500 animate-pulse" : "bg-amber-500 animate-pulse"
                             )} />
-                            <span className={clsx(
-                                "text-sm",
-                                connectionStatus === 'connected' ? "text-zinc-400" : "text-amber-500/80"
-                            )}>
+                            <button
+                                type="button"
+                                onClick={() => setShowConnectInfo(true)}
+                                className={clsx(
+                                    "text-sm transition-colors",
+                                    connectionStatus === 'connected'
+                                        ? "text-zinc-400 hover:text-white"
+                                        : "text-amber-500/80 hover:text-amber-300"
+                                )}
+                                title="Show connection QR and ID"
+                            >
                                 {connectionStatus === 'connected' ? getFriendlyName() : 'Waiting'}
-                            </span>
+                            </button>
                         </div>
                     </div>
 
@@ -402,7 +470,17 @@ const TransferPage = () => {
                             allActivity.map((item) => (
                                 <div
                                     key={item.id}
-                                    className="relative bg-[#2a2a2a] rounded-xl p-4 border border-white/[0.05] hover:border-white/[0.1] transition-all"
+                                    onClick={() => {
+                                        if (item.type === 'file') {
+                                            handlePreviewFile(item);
+                                        }
+                                    }}
+                                    className={clsx(
+                                        "relative bg-[#2a2a2a] rounded-xl p-4 border border-white/[0.05] transition-all",
+                                        item.type === 'file' && item.previewUrl && item.fileType?.startsWith('image/')
+                                            ? "cursor-pointer hover:border-cyan-400/40"
+                                            : "hover:border-white/[0.1]"
+                                    )}
                                 >
                                     {/* Header Row */}
                                     <div className="flex items-center justify-between mb-2">
@@ -429,7 +507,7 @@ const TransferPage = () => {
                                         ) : item.blobUrl ? (
                                             <a
                                                 href={item.blobUrl}
-                                                download={item.fileName}
+                                                download={item.downloadFileName || item.fileName}
                                                 onClick={(e) => e.stopPropagation()}
                                                 className="p-1.5 rounded-lg text-zinc-500 hover:text-cyan-400 hover:bg-cyan-400/10 transition-all"
                                                 title="Save File"
@@ -465,7 +543,11 @@ const TransferPage = () => {
                                         <div>
                                             <div className="flex items-center justify-between mb-2">
                                                 <div className="flex items-center gap-2">
-                                                    <File size={14} className="text-zinc-400" />
+                                                    {item.fileType?.startsWith('image/') ? (
+                                                        <Image size={14} className="text-cyan-400" />
+                                                    ) : (
+                                                        <File size={14} className="text-zinc-400" />
+                                                    )}
                                                     <span className="text-zinc-300 text-sm truncate max-w-[200px]">{item.fileName}</span>
                                                 </div>
                                                 <span className={clsx(
@@ -490,7 +572,7 @@ const TransferPage = () => {
                                             </div>
                                             <div className="flex justify-between text-[10px] text-zinc-600">
                                                 <span>{((item.fileSize || 0) / 1024 / 1024).toFixed(2)} MB</span>
-                                                <span>{item.direction === 'outgoing' ? 'Sent' : 'Received'}</span>
+                                                <span>{item.previewUrl && item.fileType?.startsWith('image/') ? 'Tap to preview' : item.direction === 'outgoing' ? 'Sent' : 'Received'}</span>
                                             </div>
                                         </div>
                                     )}
@@ -514,6 +596,67 @@ const TransferPage = () => {
                 </div>
             )}
 
+            {showConnectInfo && (
+                <div
+                    className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 px-4 backdrop-blur-md"
+                    onClick={() => setShowConnectInfo(false)}
+                >
+                    <div
+                        className="w-full max-w-sm rounded-[28px] border border-white/10 bg-[#202020]/95 p-5 shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">Connect More</p>
+                                <h3 className="mt-1 text-lg font-semibold text-white">Share this QR or ID</h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowConnectInfo(false)}
+                                className="rounded-full border border-white/10 bg-white/5 p-2 text-zinc-400 transition-colors hover:text-white"
+                                aria-label="Close connect info"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        <div className="mt-5 flex justify-center">
+                            <div className="inline-flex rounded-[24px] border border-white/10 bg-white p-2">
+                            {connectQrUrl ? (
+                                <QRCodeSVG
+                                    value={connectQrUrl}
+                                    size={220}
+                                    bgColor="#ffffff"
+                                    fgColor="#111111"
+                                    level="L"
+                                    includeMargin={false}
+                                    className="block h-[220px] w-[220px]"
+                                />
+                            ) : (
+                                <div className="h-[220px] w-[220px] animate-pulse rounded-2xl bg-zinc-200" />
+                            )}
+                            </div>
+                        </div>
+
+                        <div className="mt-5 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4">
+                            <div className="min-w-0 flex-1">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Device ID</p>
+                                <p className="mt-2 truncate text-sm font-medium text-white">{myPeerId || 'Generating...'}</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleCopyPeerId}
+                                className="ml-4 rounded-lg p-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
+                                aria-label={peerIdCopied ? 'Device ID copied' : 'Copy device ID'}
+                                title={peerIdCopied ? 'Copied!' : 'Copy ID'}
+                            >
+                                {peerIdCopied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Image Preview Modal (Premium Glassmorphism Design) */}
             {previewImage && (
                 <div
@@ -529,7 +672,6 @@ const TransferPage = () => {
                         if (touchStartY.current === null) return;
                         const deltaY = e.changedTouches[0].clientY - touchStartY.current;
                         if (Math.abs(deltaY) > 80) {
-                            URL.revokeObjectURL(previewImage.url);
                             setPreviewImage(null);
                         }
                         touchStartY.current = null;
@@ -554,7 +696,6 @@ const TransferPage = () => {
                         {/* Close Button */}
                         <button
                             onClick={() => {
-                                URL.revokeObjectURL(previewImage.url);
                                 setPreviewImage(null);
                             }}
                             className="p-2.5 rounded-full backdrop-blur-2xl border border-white/[0.1] text-zinc-400 hover:text-white hover:border-white/[0.25] hover:bg-white/10 transition-all duration-300 pointer-events-auto"

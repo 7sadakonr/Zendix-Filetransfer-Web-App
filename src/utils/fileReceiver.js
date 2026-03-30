@@ -10,7 +10,6 @@ const transfers = new Map();
  */
 const animateProgress = (transferId, duration, currentProgress) => {
     return new Promise((resolve) => {
-        const store = useAppStore.getState();
         const startProgress = currentProgress || 90;
         const startTime = Date.now();
         const remaining = 100 - startProgress;
@@ -44,7 +43,13 @@ const finalizeTransfer = (transferId, transfer) => {
     const url = URL.createObjectURL(blob);
 
     // Mark as completed + play sound + Save url
-    store.updateFileTransfer(transferId, { status: 'completed', progress: 100, blobUrl: url });
+    store.updateFileTransfer(transferId, {
+        status: 'completed',
+        progress: 100,
+        blobUrl: url,
+        previewUrl: url,
+        downloadFileName: transfer.metadata.fileName
+    });
     playTransferCompleteSound();
 
     // Optional Auto-Preview for Mobile Images (Since saving images natively on iOS often requires long-press)
@@ -65,9 +70,10 @@ export const handleFileProtocol = (payload) => {
     const store = useAppStore.getState();
 
     if (type === 'METADATA') {
-        const { fileName, fileSize, fileType } = payload;
+        const { fileName, displayName, fileSize, relativePath } = payload;
+        const resolvedDisplayName = displayName || relativePath || fileName;
 
-        console.log(`[FileReceiver] New file: ${fileName}`);
+        console.log(`[FileReceiver] New file: ${resolvedDisplayName}`);
         transfers.set(transferId, {
             metadata: payload,
             chunks: [],
@@ -76,11 +82,14 @@ export const handleFileProtocol = (payload) => {
 
         store.addFileTransfer({
             id: transferId,
-            fileName,
+            fileName: resolvedDisplayName,
             fileSize,
             progress: 0,
             direction: 'incoming',
-            status: 'transferring'
+            status: 'transferring',
+            timestamp: Date.now(),
+            relativePath,
+            fileType: payload.fileType
         });
         markTransferStart(transferId);
     }
@@ -88,7 +97,7 @@ export const handleFileProtocol = (payload) => {
         const transfer = transfers.get(transferId);
         if (!transfer) return;
 
-        const { data, offset } = payload;
+        const { data } = payload;
         transfer.chunks.push(data);
 
         transfer.receivedBytes += data.byteLength;
