@@ -10,7 +10,7 @@ const nouns = [
 
 export const generatePeerId = () => {
     const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const num = Math.floor(Math.random() * 10000); // 0-9999 to maintain enough randomness
+    const num = String(Math.floor(Math.random() * 100)).padStart(2, '0'); // 00-99
 
     return `${adj}-${num}`;
 };

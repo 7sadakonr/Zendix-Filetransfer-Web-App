@@ -9,7 +9,7 @@ import Logo from '../assets/img/blap-logo-full.png';
 
 const ConnectPage = () => {
     const navigate = useNavigate();
-    const { connectToPeer } = usePeerConnection();
+    const { connectToPeer, regeneratePeerId } = usePeerConnection();
     const { myPeerId, connectionStatus, remotePeerIds } = useAppStore();
 
     const [showScanner, setShowScanner] = useState(false);
@@ -68,6 +68,11 @@ const ConnectPage = () => {
         connectToPeer(formattedId);
     };
 
+    const handleLogoClick = () => {
+        regeneratePeerId();
+        setCopied(false);
+    };
+
     const qrUrl = myPeerId
         ? `${window.location.protocol}//${window.location.host}/?connect=${myPeerId}`
         : '';
@@ -99,7 +104,15 @@ const ConnectPage = () => {
                     {/* Header */}
                     <div className="relative flex justify-between items-center shrink-0">
                         <h2 className="text-neutral-200 text-lg sm:text-xl font-semibold" id="identity-heading">Your Identity</h2>
-                        <img src={Logo} alt="Blap" className="h-4 sm:h-5 w-auto opacity-70 transition-opacity duration-300 ease-out group-hover:opacity-100 invert" />
+                        <button
+                            type="button"
+                            onClick={handleLogoClick}
+                            className="group/logo inline-flex w-fit h-fit items-center justify-center shrink-0 p-0 leading-none transition-transform duration-300 hover:scale-105"
+                            title="Generate a new device ID"
+                            aria-label="Generate a new device ID"
+                        >
+                            <img src={Logo} alt="Blap" className="block h-4 sm:h-5 w-auto opacity-70 transition-opacity duration-300 ease-out invert group-hover/logo:opacity-100" />
+                        </button>
                     </div>
 
                     {/* Divider under header */}
@@ -140,14 +153,20 @@ const ConnectPage = () => {
 
                     {/* Device ID Section */}
                     <div className="relative flex justify-between items-center shrink-0">
-                        <div className="min-w-0 flex-1">
+                        <button
+                            type="button"
+                            onClick={handleLogoClick}
+                            className="min-w-0 flex-1 text-left rounded-lg transition-colors hover:bg-white/5 -ml-2 px-2 py-1"
+                            title="Generate a new device ID"
+                            aria-label="Generate a new device ID"
+                        >
                             <div className="text-zinc-500 text-[10px] sm:text-xs font-medium tracking-widest uppercase mb-1">
                                 DEVICE ID
                             </div>
                             <div className="text-neutral-200 text-sm sm:text-base font-medium truncate">
                                 {myPeerId || 'Generating...'}
                             </div>
-                        </div>
+                        </button>
                         <button
                             onClick={copyMyId}
                             aria-label={copied ? 'Device ID copied' : 'Copy device ID to clipboard'}

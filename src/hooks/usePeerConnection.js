@@ -8,6 +8,15 @@ import { handleFileProtocol } from '../utils/fileReceiver';
 let peerInstance = null;
 let reconnectInterval = null;
 let isInitialized = false;
+let unavailableIdRetries = 0;
+const MAX_UNAVAILABLE_ID_RETRIES = 4;
+
+const schedulePeerReinitialize = (delayMs = 100) => {
+    setTimeout(() => {
+        isInitialized = true;
+        initializePeer();
+    }, delayMs);
+};
 
 const initializePeer = () => {
     if (peerInstance && !peerInstance.destroyed) {
@@ -15,7 +24,15 @@ const initializePeer = () => {
     }
 
     const store = useAppStore.getState();
-    const id = store.myPeerId || generatePeerId();
+    const id = store.preferredPeerId || store.myPeerId || generatePeerId();
+
+    if (!store.preferredPeerId) {
+        store.setPreferredPeerId(id);
+    }
+
+    if (!store.myPeerId) {
+        store.setMyPeerId(id);
+    }
 
     console.log('[Peer] Creating new instance with ID:', id);
 
@@ -53,6 +70,8 @@ const initializePeer = () => {
     peerInstance.on('open', (id) => {
         console.log('[Peer] Opened with ID:', id);
         useAppStore.getState().setMyPeerId(id);
+        useAppStore.getState().setPreferredPeerId(id);
+        unavailableIdRetries = 0;
         if (reconnectInterval) {
             clearInterval(reconnectInterval);
             reconnectInterval = null;
@@ -78,7 +97,6 @@ const initializePeer = () => {
 
     peerInstance.on('close', () => {
         console.log('[Peer] Destroyed');
-        useAppStore.getState().setMyPeerId(null);
         useAppStore.getState().setConnectionStatus('disconnected');
         peerInstance = null;
         isInitialized = false;
@@ -93,17 +111,26 @@ const initializePeer = () => {
             // We just let the connection fail gracefully.
             console.warn('[Peer] A remote peer is unavailable.');
         } else if (err.type === 'unavailable-id') {
-            // This happens if the user reloads the page before the signaling server realizes 
-            // they disconnected. In this case, their "saved" myPeerId from localStorage is 
-            // rejected. Force clear to get a brand new ID on reload.
-            console.warn('[Peer] Requested ID is taken or stale. Clearing and reloading.');
-            store.clearPersistedData();
+            unavailableIdRetries += 1;
+            const retryDelay = Math.min(5000, unavailableIdRetries * 1500);
+            console.warn(`[Peer] Requested ID is unavailable. Retrying the same ID in ${retryDelay}ms (attempt ${unavailableIdRetries}/${MAX_UNAVAILABLE_ID_RETRIES}).`);
+
             if (peerInstance) {
                 peerInstance.destroy();
                 peerInstance = null;
                 isInitialized = false;
             }
-            window.location.href = '/';
+
+            if (unavailableIdRetries <= MAX_UNAVAILABLE_ID_RETRIES) {
+                schedulePeerReinitialize(retryDelay);
+            } else {
+                const newId = generatePeerId();
+                console.warn('[Peer] Existing ID stayed unavailable. Falling back to a new generated ID:', newId);
+                store.setPreferredPeerId(newId);
+                store.setMyPeerId(newId);
+                unavailableIdRetries = 0;
+                schedulePeerReinitialize(250);
+            }
         } else {
             // For other generic errors, ensure the UI isn't stuck "connecting" forever
             if (store.connectionStatus === 'connecting') {
@@ -331,10 +358,7 @@ export const usePeerConnection = () => {
                     peerInstance = null;
                 }
                 isInitialized = false;
-                setTimeout(() => {
-                    isInitialized = true;
-                    initializePeer();
-                }, 100);
+                schedulePeerReinitialize();
             }, 500);
         } else {
             if (peerInstance) {
@@ -342,11 +366,34 @@ export const usePeerConnection = () => {
                 peerInstance = null;
             }
             isInitialized = false;
-            setTimeout(() => {
-                isInitialized = true;
-                initializePeer();
-            }, 100);
+            schedulePeerReinitialize();
         }
+    }, []);
+
+    const regeneratePeerId = useCallback(() => {
+        const store = useAppStore.getState();
+        const newId = generatePeerId();
+
+        console.log('[Peer] Regenerating peer ID:', newId);
+
+        unavailableIdRetries = 0;
+        store.resetConnectionSession();
+        store.setPreferredPeerId(newId);
+        store.setMyPeerId(newId);
+
+        if (peerInstance) {
+            try {
+                peerInstance.destroy();
+            } catch (err) {
+                console.error('[Peer] Failed to destroy peer while regenerating ID:', err);
+            }
+            peerInstance = null;
+        }
+
+        isInitialized = false;
+        schedulePeerReinitialize();
+
+        return newId;
     }, []);
 
     return {
@@ -355,6 +402,7 @@ export const usePeerConnection = () => {
         activeConnections,
         remotePeerIds,
         connectToPeer,
+        regeneratePeerId,
         disconnectPeer: manualDisconnect,
         sendData
     };

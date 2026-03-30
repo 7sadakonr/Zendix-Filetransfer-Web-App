@@ -6,7 +6,9 @@ const useAppStore = create(
         (set, get) => ({
             // Identity
             myPeerId: null,
+            preferredPeerId: null,
             setMyPeerId: (id) => set({ myPeerId: id }),
+            setPreferredPeerId: (id) => set({ preferredPeerId: id }),
 
             // Connection
             connectionStatus: 'disconnected', // disconnected, connecting, connected
@@ -18,6 +20,11 @@ const useAppStore = create(
                 remotePeerIds: [...new Set([...state.remotePeerIds, conn.peer])],
                 connectionStatus: 'connected'
             })),
+            resetConnectionSession: () => set({
+                remotePeerIds: [],
+                activeConnections: [],
+                connectionStatus: 'disconnected'
+            }),
             removeConnection: (peerId) => set((state) => {
                 const newConnections = state.activeConnections.filter(c => c.peer !== peerId);
                 const newPeerIds = state.remotePeerIds.filter(id => id !== peerId);
@@ -63,7 +70,8 @@ const useAppStore = create(
                     }
                 });
                 return {
-                    myPeerId: null,
+                    myPeerId: state.myPeerId,
+                    preferredPeerId: state.preferredPeerId,
                     remotePeerIds: [],
                     activeConnections: [],
                     clipboardHistory: [],
@@ -78,6 +86,7 @@ const useAppStore = create(
             name: 'blap-storage', // key in localStorage
             partialize: (state) => ({
                 myPeerId: state.myPeerId,
+                preferredPeerId: state.preferredPeerId,
                 remotePeerIds: state.remotePeerIds || (state.remotePeerId ? [state.remotePeerId] : []),
                 clipboardHistory: state.clipboardHistory,
                 fileTransfers: state.fileTransfers,
