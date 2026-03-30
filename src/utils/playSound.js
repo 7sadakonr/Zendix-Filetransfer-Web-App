@@ -1,9 +1,12 @@
-// Sound files served from /public/
-// Uses Web Audio API for reliable mobile playback.
+import startSoundUrl from '../assets/sound/start.mp3';
+import completeSoundUrl from '../assets/sound/end.mp3';
+
+// Uses bundled audio assets so updated files get fresh hashed URLs.
+// Web Audio API keeps playback more reliable on mobile.
 
 const SOUNDS = {
-    start: '/transfer-start.mp3',
-    complete: '/transfer-complete.mp3',
+    start: startSoundUrl,
+    complete: completeSoundUrl,
 };
 
 // Minimum gap (ms) between start and complete sounds/UI
