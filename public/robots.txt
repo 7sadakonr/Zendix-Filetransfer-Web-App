@@ -1,9 +1,10 @@
-# Blap - Clipboard & File Transfer Web App
-# https://github.com/7sadakonr/Blap-Clipboard-and-File-Transfer-Web-App
+﻿# Zendix - Clipboard & File Transfer Web App
 
 User-agent: *
 Allow: /
-Disallow: /transfer
 
-# Sitemap
-Sitemap: https://blap-file.vercel.app/sitemap.xml
+# Block private/internal paths
+Disallow: /_*
+Disallow: /api/
+
+Sitemap: https://zendix.vercel.app/sitemap.xml

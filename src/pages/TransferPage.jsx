@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+﻿import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePeerConnection } from '../hooks/usePeerConnection';
 import useAppStore from '../stores/useAppStore';
@@ -142,7 +142,7 @@ const TransferPage = () => {
                     }
                 }
             } else if (!navigator.clipboard) {
-                alert("อุปกรณ์ของคุณถูกจำกัดสิทธิ์การวางไฟล์จากปุ่ม (ต้องใช้งานผ่าน HTTPS ลิงก์) กรุณาลองใช้วิธีกดค้างที่ช่องพิมพ์แล้วเลือก Paste หรือไปที่แท็บ File แทนครับ");
+                alert("เธญเธธเธเธเธฃเธ“เนเธเธญเธเธเธธเธ“เธ–เธนเธเธเธณเธเธฑเธ”เธชเธดเธ—เธเธดเนเธเธฒเธฃเธงเธฒเธเนเธเธฅเนเธเธฒเธเธเธธเนเธก (เธ•เนเธญเธเนเธเนเธเธฒเธเธเนเธฒเธ HTTPS เธฅเธดเธเธเน) เธเธฃเธธเธ“เธฒเธฅเธญเธเนเธเนเธงเธดเธเธตเธเธ”เธเนเธฒเธเธ—เธตเนเธเนเธญเธเธเธดเธกเธเนเนเธฅเนเธงเน€เธฅเธทเธญเธ Paste เธซเธฃเธทเธญเนเธเธ—เธตเนเนเธ—เนเธ File เนเธ—เธเธเธฃเธฑเธ");
             }
         } catch (err) {
             console.error('Failed to paste:', err);
@@ -224,11 +224,11 @@ const TransferPage = () => {
         : '';
 
     return (
-        <main aria-label="Blap - Transfer files and clipboard" className="fixed inset-0 flex flex-col md:flex-row md:items-center md:justify-center px-4 sm:px-6 lg:px-8 pt-[calc(1rem+env(safe-area-inset-top))] sm:pt-[calc(1.5rem+env(safe-area-inset-top))] lg:pt-[calc(2rem+env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:pb-[max(2rem,env(safe-area-inset-bottom))] font-['Inter'] overflow-hidden">
+        <main aria-label="Zendix - Transfer files and clipboard" className="fixed inset-0 flex flex-col md:flex-row md:items-center md:justify-center px-4 sm:px-6 lg:px-8 pt-[calc(1rem+env(safe-area-inset-top))] sm:pt-[calc(1.5rem+env(safe-area-inset-top))] lg:pt-[calc(2rem+env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:pb-[max(2rem,env(safe-area-inset-bottom))] font-['Inter'] overflow-hidden">
             {/* Safe Area Top Mask to guarantee solid status bar color */}
             <div className="fixed top-0 left-0 w-full h-[env(safe-area-inset-top)] bg-[#1a1a1a] z-50 pointer-events-none"></div>
             {/* SEO: Hidden h1 for search engines */}
-            <h1 className="sr-only">Blap — Peer-to-Peer File Transfer and Clipboard Sync</h1>
+            <h1 className="sr-only">Zendix - Peer-to-Peer File Transfer and Clipboard Sync</h1>
             {/* Ambient glow background */}
             <div className="fixed top-0 left-0 w-full h-[100vh] overflow-hidden pointer-events-none -z-10">
                 <div className="absolute top-[-10%] left-[-10%] w-[60vw] min-w-[300px] aspect-square rounded-full opacity-20 blur-[80px] sm:blur-[100px]"
@@ -751,3 +751,5 @@ const TransferPage = () => {
 };
 
 export default TransferPage;
+
+

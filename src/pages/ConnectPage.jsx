@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePeerConnection } from '../hooks/usePeerConnection';
 import useAppStore from '../stores/useAppStore';
 import ConnectModal from '../components/ConnectModal';
 import { Camera, Copy, ArrowRight, Check } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import Logo from '../assets/img/blap-logo-full.png';
+const logoSrc = '/logo.svg';
 
 const ConnectPage = () => {
     const navigate = useNavigate();
@@ -78,11 +78,11 @@ const ConnectPage = () => {
         : '';
 
     return (
-        <main aria-label="Blap - Connect to a peer device" className="fixed inset-0 flex flex-col md:flex-row md:items-center md:justify-center px-4 sm:px-6 lg:px-8 pt-[calc(1rem+env(safe-area-inset-top))] sm:pt-[calc(1.5rem+env(safe-area-inset-top))] lg:pt-[calc(2rem+env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:pb-[max(2rem,env(safe-area-inset-bottom))] font-['Inter'] overflow-hidden">
+        <main aria-label="Zendix - Connect to a peer device" className="fixed inset-0 flex flex-col md:flex-row md:items-center md:justify-center px-4 sm:px-6 lg:px-8 pt-[calc(1rem+env(safe-area-inset-top))] sm:pt-[calc(1.5rem+env(safe-area-inset-top))] lg:pt-[calc(2rem+env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:pb-[max(2rem,env(safe-area-inset-bottom))] font-['Inter'] overflow-hidden">
             {/* Safe Area Top Mask to guarantee solid status bar color */}
             <div className="fixed top-0 left-0 w-full h-[env(safe-area-inset-top)] bg-[#1a1a1a] z-50 pointer-events-none"></div>
             {/* SEO: Hidden h1 for search engines */}
-            <h1 className="sr-only">Blap — Fast Peer-to-Peer File and Clipboard Transfer</h1>
+            <h1 className="sr-only">Zendix - Fast Peer-to-Peer File and Clipboard Transfer</h1>
             {/* Subtle ambient glow for background */}
             <div className="fixed top-0 left-0 w-full h-[100vh] overflow-hidden pointer-events-none -z-10">
                 <div className="absolute top-[-10%] left-[-10%] w-[60vw] min-w-[300px] aspect-square rounded-full opacity-20 blur-[80px] sm:blur-[100px]"
@@ -111,7 +111,7 @@ const ConnectPage = () => {
                             title="Generate a new device ID"
                             aria-label="Generate a new device ID"
                         >
-                            <img src={Logo} alt="Blap" className="block h-4 sm:h-5 w-auto opacity-70 transition-opacity duration-300 ease-out invert group-hover/logo:opacity-100" />
+                            <img src={logoSrc} alt="Zendix" className="block h-4 sm:h-5 w-auto opacity-70 transition-opacity duration-300 ease-out invert group-hover/logo:opacity-100" />
                         </button>
                     </div>
 
@@ -366,3 +366,5 @@ const ConnectPage = () => {
 };
 
 export default ConnectPage;
+
+

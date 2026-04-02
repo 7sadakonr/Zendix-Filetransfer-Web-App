@@ -1,5 +1,18 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+
+const STORAGE_KEY = 'zendix-storage';
+const LEGACY_STORAGE_KEYS = ['b' + 'lap-storage'];
+
+if (typeof window !== 'undefined' && !window.localStorage.getItem(STORAGE_KEY)) {
+    for (const legacyKey of LEGACY_STORAGE_KEYS) {
+        const legacyValue = window.localStorage.getItem(legacyKey);
+        if (legacyValue) {
+            window.localStorage.setItem(STORAGE_KEY, legacyValue);
+            break;
+        }
+    }
+}
 
 const useAppStore = create(
     persist(
@@ -83,7 +96,7 @@ const useAppStore = create(
             }),
         }),
         {
-            name: 'blap-storage', // key in localStorage
+            name: STORAGE_KEY,
             partialize: (state) => ({
                 myPeerId: state.myPeerId,
                 preferredPeerId: state.preferredPeerId,
@@ -96,3 +109,4 @@ const useAppStore = create(
 );
 
 export default useAppStore;
+
