@@ -625,15 +625,15 @@ const TransferPage = () => {
                             {connectQrUrl ? (
                                 <QRCodeSVG
                                     value={connectQrUrl}
-                                    size={220}
+                                    size={240}
                                     bgColor="#ffffff"
                                     fgColor="#111111"
                                     level="L"
                                     includeMargin={false}
-                                    className="block h-[220px] w-[220px]"
+                                    className="block h-[min(78vw,240px)] w-[min(78vw,240px)] rounded-[16px]"
                                 />
                             ) : (
-                                <div className="h-[220px] w-[220px] animate-pulse rounded-2xl bg-zinc-200" />
+                                <div className="h-[min(78vw,240px)] w-[min(78vw,240px)] animate-pulse rounded-[16px] bg-zinc-200" />
                             )}
                             </div>
                         </div>

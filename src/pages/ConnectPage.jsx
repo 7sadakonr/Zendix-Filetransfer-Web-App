@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { usePeerConnection } from '../hooks/usePeerConnection';
 import useAppStore from '../stores/useAppStore';
 import ConnectModal from '../components/ConnectModal';
-import { Camera, Copy, ArrowRight, Check } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import { Camera, Copy, Check } from 'lucide-react';
+import AnimatedQRCode from '../components/AnimatedQRCode';
 const logoSrc = '/logo.svg';
 
 const ConnectPage = () => {
@@ -38,7 +38,7 @@ const ConnectPage = () => {
     // Navigate to transfer when connected or if session restored
     useEffect(() => {
         if (connectionStatus === 'connected') {
-            setTimeout(() => navigate('/transfer'), 1000);
+            navigate('/transfer');
         } else if (remotePeerIds && remotePeerIds.length > 0) {
             // Auto redirect to transfer page to attempt reconnection
             navigate('/transfer');
@@ -94,7 +94,7 @@ const ConnectPage = () => {
             <div className="relative z-10 flex flex-col md:flex-row gap-3 sm:gap-4 lg:gap-8 w-full max-w-[560px] lg:max-w-[800px] h-full md:h-auto justify-center items-stretch mx-auto">
 
                 {/* Your Identity Card */}
-                <div className="relative group rounded-[20px] sm:rounded-[24px] lg:rounded-[32px] p-4 sm:p-5 lg:p-8 w-full md:w-[280px] lg:w-[380px] flex flex-col flex-1 md:flex-none min-h-0 backdrop-blur-2xl border border-white/[0.15] overflow-hidden"
+                <div className="relative group rounded-[18px] sm:rounded-[24px] lg:rounded-[32px] p-3.5 sm:p-5 lg:p-8 w-full md:w-[280px] lg:w-[380px] flex flex-col flex-1 md:flex-none min-h-0 backdrop-blur-2xl border border-white/[0.15] overflow-hidden"
                     style={{
                         background: 'rgba(42, 42, 42, 0.7)',
                         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
@@ -103,7 +103,7 @@ const ConnectPage = () => {
 
                     {/* Header */}
                     <div className="relative flex justify-between items-center shrink-0">
-                        <h2 className="text-neutral-200 text-lg sm:text-xl font-semibold" id="identity-heading">Your Identity</h2>
+                        <h2 className="text-neutral-200 text-base sm:text-xl font-semibold" id="identity-heading">Your Identity</h2>
                         <button
                             type="button"
                             onClick={handleLogoClick}
@@ -111,44 +111,63 @@ const ConnectPage = () => {
                             title="Generate a new device ID"
                             aria-label="Generate a new device ID"
                         >
-                            <img src={logoSrc} alt="Zendix" className="block h-4 sm:h-5 w-auto opacity-70 transition-opacity duration-300 ease-out invert group-hover/logo:opacity-100" />
+                            <img src={logoSrc} alt="Zendix" className="block h-3.5 sm:h-5 w-auto opacity-70 transition-opacity duration-300 ease-out invert group-hover/logo:opacity-100" />
                         </button>
                     </div>
 
                     {/* Divider under header */}
-                    <div className="relative w-full h-px my-3 sm:my-4 shrink-0"
+                    <div className="relative w-full h-px my-2.5 sm:my-4 shrink-0"
                         style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)' }} />
 
                     {/* QR Code in Rounded Square */}
                     <div className="relative flex-1 flex flex-col items-center justify-center min-h-0">
-                        <div className="relative w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 lg:w-48 lg:h-48 bg-white rounded-2xl sm:rounded-3xl flex items-center justify-center shrink-0 p-3 sm:p-4"
+                        <button
+                            type="button"
+                            onClick={handleLogoClick}
+                            className="relative w-36 h-36 sm:w-40 sm:h-40 md:w-40 md:h-40 lg:w-48 lg:h-48 bg-white rounded-[28px] sm:rounded-[32px] flex items-center justify-center shrink-0 p-2"
+                            title="Generate a new device ID"
+                            aria-label="Generate a new device ID"
                             style={{
                                 transition: 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease',
                                 boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
-                            }}>
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'scale(1.03)';
+                                e.currentTarget.style.boxShadow = '0 10px 28px rgba(0, 0, 0, 0.3)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'scale(1)';
+                                e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.25)';
+                            }}
+                            onMouseDown={(e) => {
+                                e.currentTarget.style.transform = 'scale(0.98)';
+                            }}
+                            onMouseUp={(e) => {
+                                e.currentTarget.style.transform = 'scale(1.03)';
+                            }}
+                        >
                             {qrUrl ? (
-                                <QRCodeSVG
+                                <AnimatedQRCode
                                     value={qrUrl}
-                                    size={200}
                                     bgColor="#ffffff"
                                     fgColor="#1a1a1a"
                                     level="L"
                                     includeMargin={false}
-                                    className="w-full h-full"
+                                    className="w-full h-full rounded-[20px] sm:rounded-[24px]"
                                 />
                             ) : (
-                                <div className="w-full h-full bg-neutral-200 rounded-xl animate-pulse" />
+                                <div className="w-full h-full bg-neutral-200 rounded-[20px] sm:rounded-[24px] animate-pulse" />
                             )}
-                        </div>
+                        </button>
 
                         {/* Device Name */}
-                        <div className="text-neutral-200 text-lg sm:text-xl lg:text-2xl font-semibold text-center mt-3 sm:mt-4 shrink-0">
+                        <div className="text-neutral-200 text-base sm:text-xl lg:text-2xl font-semibold text-center mt-2.5 sm:mt-4 shrink-0">
                             {getDeviceName(myPeerId)}
                         </div>
                     </div>
 
                     {/* Divider */}
-                    <div className="relative w-full h-px my-3 sm:my-4 shrink-0"
+                    <div className="relative w-full h-px my-2.5 sm:my-4 shrink-0"
                         style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)' }} />
 
                     {/* Device ID Section */}
@@ -156,14 +175,14 @@ const ConnectPage = () => {
                         <button
                             type="button"
                             onClick={handleLogoClick}
-                            className="min-w-0 flex-1 text-left rounded-lg transition-colors hover:bg-white/5 -ml-2 px-2 py-1"
+                            className="min-w-0 flex-1 text-left rounded-lg transition-colors hover:bg-white/5 -ml-1.5 sm:-ml-2 px-1.5 sm:px-2 py-1"
                             title="Generate a new device ID"
                             aria-label="Generate a new device ID"
                         >
-                            <div className="text-zinc-500 text-[10px] sm:text-xs font-medium tracking-widest uppercase mb-1">
+                            <div className="text-zinc-500 text-[9px] sm:text-xs font-medium tracking-[0.2em] sm:tracking-widest uppercase mb-1">
                                 DEVICE ID
                             </div>
-                            <div className="text-neutral-200 text-sm sm:text-base font-medium truncate">
+                            <div className="text-neutral-200 text-[15px] sm:text-base font-medium truncate">
                                 {myPeerId || 'Generating...'}
                             </div>
                         </button>
@@ -285,7 +304,7 @@ const ConnectPage = () => {
                     <button
                         onClick={() => setShowScanner(true)}
                         aria-label="Scan QR code to connect"
-                        className="w-full bg-[#3a3a3a] text-white rounded-lg py-2.5 text-sm sm:text-base font-medium flex items-center justify-center gap-2 mb-3 sm:mb-4 shrink-0"
+                        className="w-full bg-[#3a3a3a] text-white rounded-lg py-2.5 text-sm sm:text-base font-medium flex items-center justify-center gap-2 shrink-0"
                         style={{
                             transition: 'all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                         }}
@@ -308,36 +327,20 @@ const ConnectPage = () => {
                         Scan
                     </button>
 
-                    {/* Hint Text - flexible space */}
-                    <div className="relative flex-1 flex items-end min-h-0">
-                        <p className="text-zinc-500 text-xs text-center w-full">
-                            Enter peer ID or scan QR to connect
-                        </p>
-                    </div>
+                    <div className="relative mt-auto shrink-0">
+                        <div className="w-full h-px my-3 sm:my-4"
+                            style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)' }} />
 
-                    {/* Connected State */}
-                    {connectionStatus === 'connected' && (
-                        <div className="relative mt-2 p-2 sm:p-3 rounded-xl text-center shrink-0 border border-emerald-500/30"
-                            style={{ background: 'rgba(16, 185, 129, 0.1)', backdropFilter: 'blur(8px)' }}>
-                            <p className="text-emerald-400 font-semibold mb-1 sm:mb-2 flex items-center justify-center gap-1 text-xs">
-                                <Check size={12} />
-                                {remotePeerIds.length > 1 
-                                    ? `Connected to ${remotePeerIds.length} peers` 
-                                    : `Connected to ${getDeviceName(remotePeerIds[0])}`}
+                        {/* Hint Text */}
+                        <div className="px-2 py-1.5 min-h-[48px] flex flex-col items-center justify-start">
+                            <div className="text-[10px] sm:text-xs font-medium tracking-widest uppercase mb-1 opacity-0 select-none">
+                                DEVICE ID
+                            </div>
+                            <p className="text-zinc-500 text-sm sm:text-base font-medium text-center w-full leading-none">
+                                Enter peer ID or scan QR to connect
                             </p>
-                            <button
-                                onClick={() => navigate('/transfer')}
-                                className="rounded-xl px-4 py-1.5 text-xs font-semibold transition-all duration-300 inline-flex items-center gap-1 text-white"
-                                style={{
-                                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
-                                }}
-                            >
-                                Go to Transfer
-                                <ArrowRight size={12} />
-                            </button>
                         </div>
-                    )}
+                    </div>
 
                     {/* Connecting State */}
                     {connectionStatus === 'connecting' && (

@@ -1,7 +1,7 @@
-import { QRCodeSVG } from 'qrcode.react';
 import { X, Scan, QrCode } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import QRScanner from './QRScanner';
+import AnimatedQRCode from './AnimatedQRCode';
 
 const ConnectModal = ({ onClose, myPeerId, onScanConnect }) => {
     const [qrUrl, setQrUrl] = useState('');
@@ -121,10 +121,15 @@ const ConnectModal = ({ onClose, myPeerId, onScanConnect }) => {
                     }}
                 >
                     {/* QR Preview or Icon */}
-                    <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
+                    <div className="w-14 h-14 bg-white rounded-[12px] flex items-center justify-center shrink-0 overflow-hidden"
                         style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' }}>
                         {showMyQR && qrUrl ? (
-                            <QRCodeSVG value={qrUrl} size={48} bgColor="#ffffff" fgColor="#1a1a1a" />
+                            <AnimatedQRCode
+                                value={qrUrl}
+                                bgColor="#ffffff"
+                                fgColor="#1a1a1a"
+                                className="w-12 h-12 rounded-[8px]"
+                            />
                         ) : (
                             <QrCode size={24} className="text-neutral-400" />
                         )}
@@ -150,15 +155,20 @@ const ConnectModal = ({ onClose, myPeerId, onScanConnect }) => {
                 </button>
 
                 {/* Expanded QR Section */}
-                <div className={`overflow-hidden transition-all duration-300 ease-out ${showMyQR ? 'max-h-72 mt-4 opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div className={`overflow-hidden transition-all duration-300 ease-out ${showMyQR ? 'max-h-[26rem] mt-4 opacity-100' : 'max-h-0 opacity-0'}`}>
                     <div className="rounded-2xl p-6 backdrop-blur-xl border border-white/[0.15] flex flex-col items-center"
                         style={{ background: 'rgba(42, 42, 42, 0.7)' }}>
-                        <div className="w-40 h-40 bg-white rounded-2xl p-3 mb-4"
+                        <div className="w-52 h-52 sm:w-56 sm:h-56 bg-white rounded-[28px] sm:rounded-[32px] p-2 mb-4"
                             style={{ boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)' }}>
                             {qrUrl ? (
-                                <QRCodeSVG value={qrUrl} size={200} bgColor="#ffffff" fgColor="#1a1a1a" className="w-full h-full" />
+                                <AnimatedQRCode
+                                    value={qrUrl}
+                                    bgColor="#ffffff"
+                                    fgColor="#1a1a1a"
+                                    className="w-full h-full rounded-[20px] sm:rounded-[24px]"
+                                />
                             ) : (
-                                <div className="w-full h-full bg-neutral-200 rounded-xl animate-pulse" />
+                                <div className="w-full h-full bg-neutral-200 rounded-[20px] sm:rounded-[24px] animate-pulse" />
                             )}
                         </div>
                         <p className="text-neutral-200 text-lg font-semibold">{getDeviceName(myPeerId)}</p>
