@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 const STORAGE_KEY = 'zendix-storage';
@@ -38,9 +38,9 @@ const useAppStore = create(
                 activeConnections: [],
                 connectionStatus: 'disconnected'
             }),
-            removeConnection: (peerId) => set((state) => {
+            removeConnection: (peerId, keepSession = false) => set((state) => {
                 const newConnections = state.activeConnections.filter(c => c.peer !== peerId);
-                const newPeerIds = state.remotePeerIds.filter(id => id !== peerId);
+                const newPeerIds = keepSession ? state.remotePeerIds : state.remotePeerIds.filter(id => id !== peerId);
                 return {
                     activeConnections: newConnections,
                     remotePeerIds: newPeerIds,
@@ -102,7 +102,6 @@ const useAppStore = create(
                 preferredPeerId: state.preferredPeerId,
                 remotePeerIds: state.remotePeerIds || (state.remotePeerId ? [state.remotePeerId] : []),
                 clipboardHistory: state.clipboardHistory,
-                fileTransfers: state.fileTransfers,
             }), // Only save these fields
         }
     )
