@@ -188,7 +188,7 @@ const setupConnectionHandlers = (conn, timeoutRef) => {
 
     conn.on('close', () => {
         console.log('[Conn] Closed:', conn.peer);
-        useAppStore.getState().removeConnection(conn.peer);
+        useAppStore.getState().removeConnection(conn.peer, true);
     });
 
     conn.on('error', (err) => {

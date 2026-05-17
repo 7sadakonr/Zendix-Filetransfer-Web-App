@@ -285,6 +285,7 @@ body {
   animation: toastCardEnter 0.36s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePeerConnection } from '../hooks/usePeerConnection';
 import useAppStore from '../stores/useAppStore';
@@ -62,11 +62,11 @@ const TransferPage = () => {
     useEffect(() => {
         if (connectionStatus === 'disconnected') {
             if (remotePeerIds && remotePeerIds.length > 0) {
-                console.log('[TransferPage] Attempting auto-reconnect to:', remotePeerIds[0]);
+                console.log('[TransferPage] Attempting auto-reconnect to:', remotePeerIds);
                 const timer = setTimeout(() => {
                     useAppStore.getState().setConnectionStatus('connecting'); 
                     // Auto-reconnect to the primary (first) peer for simplicity on reload
-                    connectToPeer(remotePeerIds[0]);
+                    remotePeerIds.forEach(peerId => connectToPeer(peerId));
                 }, 1500);
                 return () => clearTimeout(timer);
             } else {
