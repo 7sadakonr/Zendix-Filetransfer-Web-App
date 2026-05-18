@@ -1,9 +1,30 @@
-import { Upload, File, Download, CheckCircle, AlertCircle, X } from 'lucide-react';
+import { Upload, File, Download, CheckCircle, AlertCircle, X, Zap, Clock } from 'lucide-react';
 import { useCallback } from 'react';
 import { useFileTransfer } from '../hooks/useFileTransfer';
 import { usePeerConnection } from '../hooks/usePeerConnection';
 import { getFilesFromFileList } from '../utils/fileCollection';
 import clsx from 'clsx';
+
+const formatSpeed = (bytesPerSecond) => {
+    if (!bytesPerSecond || bytesPerSecond <= 0) return '0 B/s';
+    if (bytesPerSecond < 1024) return `${Math.round(bytesPerSecond)} B/s`;
+    if (bytesPerSecond < 1024 * 1024) return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`;
+    return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`;
+};
+
+const formatETA = (seconds) => {
+    if (seconds === undefined || seconds === null || seconds < 0) return '';
+    if (seconds === 0) return '';
+    if (seconds < 60) return `${seconds}s left`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    if (mins >= 60) {
+        const hours = Math.floor(mins / 60);
+        const remMins = mins % 60;
+        return `${hours}h ${remMins}m left`;
+    }
+    return `${mins}m ${secs}s left`;
+};
 
 const FileTransferPanel = () => {
     const { sendFiles, cancelTransfer, fileTransfers } = useFileTransfer();
@@ -53,21 +74,40 @@ const FileTransferPanel = () => {
 
                 {fileTransfers.map((ft) => (
                     <div key={ft.id} className="bg-white/5 p-4 rounded-xl border border-white/5 flex items-center gap-4">
-                        <div className="bg-stone-800 p-2 rounded-lg">
+                        <div className="bg-stone-800 p-2 rounded-lg relative">
                             <File size={20} className="text-stone-300" />
+                            {ft.direction === 'incoming' ? (
+                                <Download size={10} className="absolute -bottom-1 -right-1 text-blue-400 bg-stone-900 rounded-full" />
+                            ) : (
+                                <Upload size={10} className="absolute -bottom-1 -right-1 text-green-400 bg-stone-900 rounded-full" />
+                            )}
                         </div>
 
                         <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-center mb-1">
                                 <p className="text-sm font-medium text-white truncate">{ft.fileName}</p>
-                                <span className={clsx("text-xs font-bold uppercase",
-                                    ft.status === 'completed' ? "text-green-400" :
-                                        ft.status === 'error' ? "text-red-400" :
-                                            ft.status === 'cancelled' ? "text-stone-500" : "text-blue-400"
+                                <span className={clsx("text-[10px] font-bold uppercase px-1.5 py-0.5 rounded",
+                                    ft.status === 'completed' ? "text-green-400 bg-green-400/10" :
+                                        ft.status === 'error' ? "text-red-400 bg-red-400/10" :
+                                            ft.status === 'cancelled' ? "text-stone-500 bg-white/5" : "text-blue-400 bg-blue-400/10"
                                 )}>
                                     {ft.status}
                                 </span>
                             </div>
+
+                            {/* Speed & ETA Row */}
+                            {ft.status === 'transferring' && (
+                                <div className="flex items-center gap-3 mb-2 text-[10px] text-stone-400">
+                                    <div className="flex items-center gap-1">
+                                        <Zap size={10} className="text-yellow-500" />
+                                        <span>{formatSpeed(ft.speed)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <Clock size={10} className="text-blue-400" />
+                                        <span>{formatETA(ft.eta)}</span>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Progress Bar */}
                             <div className="w-full bg-stone-700 rounded-full h-1.5 overflow-hidden">
@@ -82,19 +122,35 @@ const FileTransferPanel = () => {
 
                             <div className="flex justify-between mt-1 text-[10px] text-stone-500">
                                 <span>{(ft.fileSize / 1024 / 1024).toFixed(2)} MB</span>
-                                <span>{ft.direction === 'outgoing' ? 'Sent' : 'Received'}</span>
+                                <div className="flex gap-2">
+                                    {ft.status === 'transferring' && <span>{ft.progress}%</span>}
+                                    <span>{ft.direction === 'outgoing' ? 'Sent' : 'Received'}</span>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Cancel Button */}
-                        {(ft.status === 'transferring' || ft.status === 'pending') && (
-                            <button
-                                onClick={() => cancelTransfer(ft.id)}
-                                className="p-2 bg-stone-700/50 hover:bg-red-500/20 text-stone-400 hover:text-red-400 rounded-lg transition-colors"
-                            >
-                                <X size={16} />
-                            </button>
-                        )}
+                        {/* Download/Cancel Button */}
+                        <div className="flex items-center gap-2">
+                            {ft.status === 'completed' && ft.direction === 'incoming' && ft.blobUrl && (
+                                <a
+                                    href={ft.blobUrl}
+                                    download={ft.downloadFileName}
+                                    className="p-2 bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 rounded-lg transition-colors"
+                                    title="Download"
+                                >
+                                    <Download size={16} />
+                                </a>
+                            )}
+                            {(ft.status === 'transferring' || ft.status === 'pending') && (
+                                <button
+                                    onClick={() => cancelTransfer(ft.id)}
+                                    className="p-2 bg-stone-700/50 hover:bg-red-500/20 text-stone-400 hover:text-red-400 rounded-lg transition-colors"
+                                    title="Cancel"
+                                >
+                                    <X size={16} />
+                                </button>
+                            )}
+                        </div>
                     </div>
                 ))}
             </div>

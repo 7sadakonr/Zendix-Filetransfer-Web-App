@@ -1,25 +1,52 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePeerConnection } from '../hooks/usePeerConnection';
 import useAppStore from '../stores/useAppStore';
 import ConnectModal from '../components/ConnectModal';
-import { Camera, Copy, Check } from 'lucide-react';
+import ConnectionConsentModal from '../components/ConnectionConsentModal';
+import { Camera, Copy, Check, Pencil } from 'lucide-react';
 import AnimatedQRCode from '../components/AnimatedQRCode';
 const logoSrc = '/logo.svg';
 
 const ConnectPage = () => {
     const navigate = useNavigate();
-    const { connectToPeer, regeneratePeerId } = usePeerConnection();
-    const { myPeerId, connectionStatus, remotePeerIds } = useAppStore();
+    const { connectToPeer, regeneratePeerId, changePeerId, acceptIncomingConnection, rejectIncomingConnection, pendingIncomingConnection } = usePeerConnection();
+    const { myPeerId, connectionStatus, remotePeerIds, deviceName, setDeviceName } = useAppStore();
 
     const [showScanner, setShowScanner] = useState(false);
     const [remoteIdInput, setRemoteIdInput] = useState('');
     const [copied, setCopied] = useState(false);
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [nameInput, setNameInput] = useState(deviceName || myPeerId || '');
+    const nameInputRef = useRef(null);
 
-    // Get device name from peer ID
-    const getDeviceName = (peerId) => {
-        if (!peerId) return 'Initializing...';
-        return peerId;
+    // Sync nameInput when deviceName or myPeerId changes
+    useEffect(() => {
+        setNameInput(deviceName || myPeerId || '');
+    }, [deviceName, myPeerId]);
+
+    // Focus input when editing starts
+    useEffect(() => {
+        if (isEditingName && nameInputRef.current) {
+            nameInputRef.current.focus();
+            nameInputRef.current.select();
+        }
+    }, [isEditingName]);
+
+    const handleNameSave = () => {
+        const trimmed = nameInput.trim();
+        if (trimmed) {
+            const result = changePeerId(trimmed);
+            if (!result) {
+                // Invalid name, revert
+                setNameInput(deviceName || myPeerId || '');
+            } else {
+                setNameInput(result.name);
+            }
+        } else {
+            setNameInput(deviceName || myPeerId || '');
+        }
+        setIsEditingName(false);
     };
 
     // Auto-Connect from URL
@@ -106,10 +133,10 @@ const ConnectPage = () => {
                         <h2 className="text-neutral-200 text-base sm:text-xl font-semibold" id="identity-heading">Your Identity</h2>
                         <button
                             type="button"
-                            onClick={handleLogoClick}
+                            onClick={copyMyId}
                             className="group/logo inline-flex w-fit h-fit items-center justify-center shrink-0 p-0 leading-none transition-transform duration-300 hover:scale-105"
-                            title="Generate a new device ID"
-                            aria-label="Generate a new device ID"
+                            title="Copy device ID"
+                            aria-label="Copy device ID"
                         >
                             <img src={logoSrc} alt="Zendix" className="block h-3.5 sm:h-5 w-auto opacity-70 transition-opacity duration-300 ease-out invert group-hover/logo:opacity-100" />
                         </button>
@@ -123,10 +150,10 @@ const ConnectPage = () => {
                     <div className="relative flex-1 flex flex-col items-center justify-center min-h-0">
                         <button
                             type="button"
-                            onClick={handleLogoClick}
+                            onClick={copyMyId}
                             className="relative w-36 h-36 sm:w-40 sm:h-40 md:w-40 md:h-40 lg:w-48 lg:h-48 bg-white rounded-[28px] sm:rounded-[32px] flex items-center justify-center shrink-0 p-2"
-                            title="Generate a new device ID"
-                            aria-label="Generate a new device ID"
+                            title="Copy device ID"
+                            aria-label="Copy device ID"
                             style={{
                                 transition: 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease',
                                 boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
@@ -160,9 +187,40 @@ const ConnectPage = () => {
                             )}
                         </button>
 
-                        {/* Device Name */}
-                        <div className="text-neutral-200 text-base sm:text-xl lg:text-2xl font-semibold text-center mt-2.5 sm:mt-4 shrink-0">
-                            {getDeviceName(myPeerId)}
+                        {/* Device Name (Editable) */}
+                        <div className="flex items-center justify-center gap-2 mt-2.5 sm:mt-4 shrink-0">
+                            {isEditingName ? (
+                                <input
+                                    ref={nameInputRef}
+                                    type="text"
+                                    value={nameInput}
+                                    onChange={(e) => setNameInput(e.target.value)}
+                                    onBlur={handleNameSave}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleNameSave();
+                                        if (e.key === 'Escape') {
+                                            setNameInput(deviceName);
+                                            setIsEditingName(false);
+                                        }
+                                    }}
+                                    className="bg-transparent text-neutral-200 text-base sm:text-xl lg:text-2xl font-semibold text-center outline-none border-b-2 border-cyan-500/50 max-w-[200px]"
+                                    maxLength={24}
+                                />
+                            ) : (
+                                <>
+                                    <span className="text-neutral-200 text-base sm:text-xl lg:text-2xl font-semibold text-center">
+                                        {deviceName || myPeerId || 'Initializing...'}
+                                    </span>
+                                    <button
+                                        onClick={() => setIsEditingName(true)}
+                                        className="p-1 rounded-lg text-zinc-500 hover:text-cyan-400 hover:bg-white/5 transition-all"
+                                        title="Edit device name"
+                                        aria-label="Edit device name"
+                                    >
+                                        <Pencil size={14} />
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
 
@@ -174,17 +232,22 @@ const ConnectPage = () => {
                     <div className="relative flex justify-between items-center shrink-0">
                         <button
                             type="button"
-                            onClick={handleLogoClick}
+                            onClick={copyMyId}
                             className="min-w-0 flex-1 text-left rounded-lg transition-colors hover:bg-white/5 -ml-1.5 sm:-ml-2 px-1.5 sm:px-2 py-1"
-                            title="Generate a new device ID"
-                            aria-label="Generate a new device ID"
+                            title="Copy device ID"
+                            aria-label="Copy device ID"
                         >
                             <div className="text-zinc-500 text-[9px] sm:text-xs font-medium tracking-[0.2em] sm:tracking-widest uppercase mb-1">
                                 DEVICE ID
                             </div>
                             <div className="text-neutral-200 text-[15px] sm:text-base font-medium truncate">
-                                {myPeerId || 'Generating...'}
+                                {deviceName || myPeerId || 'Generating...'}
                             </div>
+                            {deviceName && myPeerId && (
+                                <div className="text-zinc-600 text-[10px] sm:text-xs font-mono mt-0.5 truncate">
+                                    {myPeerId}
+                                </div>
+                            )}
                         </button>
                         <button
                             onClick={copyMyId}
@@ -364,6 +427,13 @@ const ConnectPage = () => {
                     }}
                 />
             )}
+
+            {/* Connection Consent Modal */}
+            <ConnectionConsentModal
+                pending={pendingIncomingConnection}
+                onAccept={acceptIncomingConnection}
+                onReject={rejectIncomingConnection}
+            />
         </main>
     );
 };
