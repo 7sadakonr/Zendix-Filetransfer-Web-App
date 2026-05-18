@@ -2,7 +2,7 @@ import useAppStore from '../stores/useAppStore';
 import { isMobile } from './platform';
 import { playTransferCompleteSound, getTransferCompletionDelay, markTransferStart } from './playSound';
 
-// In-memory buffer: Map<transferId, { chunks: [], receivedBytes: 0, metadata: {} }>
+// In-memory buffer: Map<transferId, { chunks: [], receivedBytes: 0, metadata: {}, startTime: number, lastUpdate: number }>
 const transfers = new Map();
 
 /**
@@ -48,7 +48,9 @@ const finalizeTransfer = (transferId, transfer) => {
         progress: 100,
         blobUrl: url,
         previewUrl: url,
-        downloadFileName: transfer.metadata.fileName
+        downloadFileName: transfer.metadata.fileName,
+        speed: 0,
+        eta: 0
     });
     playTransferCompleteSound();
 
@@ -72,12 +74,15 @@ export const handleFileProtocol = (payload) => {
     if (type === 'METADATA') {
         const { fileName, displayName, fileSize, relativePath } = payload;
         const resolvedDisplayName = displayName || relativePath || fileName;
+        const now = Date.now();
 
         console.log(`[FileReceiver] New file: ${resolvedDisplayName}`);
         transfers.set(transferId, {
             metadata: payload,
             chunks: [],
-            receivedBytes: 0
+            receivedBytes: 0,
+            startTime: now,
+            lastUpdate: now
         });
 
         store.addFileTransfer({
@@ -87,7 +92,7 @@ export const handleFileProtocol = (payload) => {
             progress: 0,
             direction: 'incoming',
             status: 'transferring',
-            timestamp: Date.now(),
+            timestamp: now,
             relativePath,
             fileType: payload.fileType
         });
@@ -99,12 +104,25 @@ export const handleFileProtocol = (payload) => {
 
         const { data } = payload;
         transfer.chunks.push(data);
-
         transfer.receivedBytes += data.byteLength;
 
-        // Cap at 99% during transfer — 100% only on finalize
-        const progress = Math.min(99, Math.round((transfer.receivedBytes / transfer.metadata.fileSize) * 100));
-        store.updateFileTransfer(transferId, { progress });
+        const now = Date.now();
+        // Throttle updates to every 500ms or when complete
+        if (now - transfer.lastUpdate > 500 || transfer.receivedBytes === transfer.metadata.fileSize) {
+            const elapsed = (now - transfer.startTime) / 1000;
+            const speed = elapsed > 0 ? transfer.receivedBytes / elapsed : 0;
+            const remaining = transfer.metadata.fileSize - transfer.receivedBytes;
+            const eta = speed > 0 ? Math.ceil(remaining / speed) : 0;
+
+            // Cap at 99% during transfer — 100% only on finalize
+            const progress = Math.min(99, Math.round((transfer.receivedBytes / transfer.metadata.fileSize) * 100));
+            store.updateFileTransfer(transferId, { 
+                progress,
+                speed,
+                eta
+            });
+            transfer.lastUpdate = now;
+        }
     }
     else if (type === 'COMPLETE') {
         const transfer = transfers.get(transferId);

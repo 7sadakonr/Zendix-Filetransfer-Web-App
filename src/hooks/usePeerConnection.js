@@ -11,11 +11,76 @@ let isInitialized = false;
 let unavailableIdRetries = 0;
 const MAX_UNAVAILABLE_ID_RETRIES = 4;
 
+// Auto-retry with exponential backoff
+let retryAttempt = 0;
+const MAX_RETRY_ATTEMPTS = 8;
+const getRetryDelay = (attempt) => Math.min(10000, Math.pow(2, attempt) * 1000); // 1s, 2s, 4s, 8s, max 10s
+
+// Track user-initiated name changes to handle unavailable-id differently
+let isUserNameChange = false;
+let previousPeerId = null;
+
 const schedulePeerReinitialize = (delayMs = 100) => {
     setTimeout(() => {
         isInitialized = true;
         initializePeer();
     }, delayMs);
+};
+
+/**
+ * Detect the connection type (LAN vs Relay) from WebRTC stats.
+ * PeerJS exposes the underlying RTCPeerConnection via conn.peerConnection.
+ */
+const detectConnectionType = async (conn) => {
+    try {
+        const pc = conn.peerConnection;
+        if (!pc) return 'unknown';
+
+        const stats = await pc.getStats();
+        let activeCandidatePairId = null;
+
+        // Find the active candidate pair
+        stats.forEach((report) => {
+            if (report.type === 'transport' && report.selectedCandidatePairId) {
+                activeCandidatePairId = report.selectedCandidatePairId;
+            }
+        });
+
+        // Fallback: find the nominated/selected candidate pair
+        if (!activeCandidatePairId) {
+            stats.forEach((report) => {
+                if (report.type === 'candidate-pair' && (report.selected || report.nominated)) {
+                    activeCandidatePairId = report.id;
+                }
+            });
+        }
+
+        if (!activeCandidatePairId) return 'unknown';
+
+        const pair = stats.get(activeCandidatePairId);
+        if (!pair) return 'unknown';
+
+        // Check the local candidate type
+        const localCandidate = stats.get(pair.localCandidateId);
+        const remoteCandidate = stats.get(pair.remoteCandidateId);
+
+        const localType = localCandidate?.candidateType;
+        const remoteType = remoteCandidate?.candidateType;
+
+        console.log(`[ICE] Local: ${localType}, Remote: ${remoteType}`);
+
+        if (localType === 'relay' || remoteType === 'relay') {
+            return 'relay';
+        }
+        if (localType === 'host' && remoteType === 'host') {
+            return 'lan';
+        }
+        // srflx means STUN was used (same internet, not LAN)
+        return 'relay';
+    } catch (err) {
+        console.warn('[ICE] Failed to detect connection type:', err);
+        return 'unknown';
+    }
 };
 
 const initializePeer = () => {
@@ -72,6 +137,10 @@ const initializePeer = () => {
         useAppStore.getState().setMyPeerId(id);
         useAppStore.getState().setPreferredPeerId(id);
         unavailableIdRetries = 0;
+        retryAttempt = 0;
+        isUserNameChange = false;
+        previousPeerId = null;
+        useAppStore.getState().setRetryCount(0);
         if (reconnectInterval) {
             clearInterval(reconnectInterval);
             reconnectInterval = null;
@@ -80,19 +149,19 @@ const initializePeer = () => {
 
     peerInstance.on('connection', (conn) => {
         console.log('[Peer] Incoming connection from:', conn.peer);
-        setupConnectionHandlers(conn);
+        // Connection Consent: Queue the connection for user approval
+        const store = useAppStore.getState();
+        store.setPendingIncomingConnection({
+            conn,
+            peerId: conn.peer,
+            deviceName: null, // Will be updated when DEVICE_INFO is received
+            timestamp: Date.now()
+        });
     });
 
     peerInstance.on('disconnected', () => {
         console.log('[Peer] Disconnected from signaling server');
-        if (!reconnectInterval) {
-            reconnectInterval = setInterval(() => {
-                if (peerInstance && !peerInstance.destroyed) {
-                    console.log('[Peer] Attempting reconnect...');
-                    peerInstance.reconnect();
-                }
-            }, 5000);
-        }
+        handleAutoRetry();
     });
 
     peerInstance.on('close', () => {
@@ -111,25 +180,43 @@ const initializePeer = () => {
             // We just let the connection fail gracefully.
             console.warn('[Peer] A remote peer is unavailable.');
         } else if (err.type === 'unavailable-id') {
-            unavailableIdRetries += 1;
-            const retryDelay = Math.min(5000, unavailableIdRetries * 1500);
-            console.warn(`[Peer] Requested ID is unavailable. Retrying the same ID in ${retryDelay}ms (attempt ${unavailableIdRetries}/${MAX_UNAVAILABLE_ID_RETRIES}).`);
-
             if (peerInstance) {
                 peerInstance.destroy();
                 peerInstance = null;
                 isInitialized = false;
             }
 
-            if (unavailableIdRetries <= MAX_UNAVAILABLE_ID_RETRIES) {
-                schedulePeerReinitialize(retryDelay);
-            } else {
-                const newId = generatePeerId();
-                console.warn('[Peer] Existing ID stayed unavailable. Falling back to a new generated ID:', newId);
-                store.setPreferredPeerId(newId);
-                store.setMyPeerId(newId);
+            // If this was a user-initiated name change, revert and show error
+            if (isUserNameChange && previousPeerId) {
+                console.warn('[Peer] User-chosen name is taken. Reverting to:', previousPeerId);
+                store.setNameChangeError('ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่น');
+                store.setPreferredPeerId(previousPeerId);
+                store.setMyPeerId(previousPeerId);
+                store.setDeviceName(null);
+                isUserNameChange = false;
+                previousPeerId = null;
                 unavailableIdRetries = 0;
                 schedulePeerReinitialize(250);
+                // Auto-clear error after 4 seconds
+                setTimeout(() => {
+                    useAppStore.getState().setNameChangeError(null);
+                }, 4000);
+            } else {
+                // Normal unavailable-id retry (e.g. on app startup)
+                unavailableIdRetries += 1;
+                const retryDelay = Math.min(5000, unavailableIdRetries * 1500);
+                console.warn(`[Peer] Requested ID is unavailable. Retrying in ${retryDelay}ms (attempt ${unavailableIdRetries}/${MAX_UNAVAILABLE_ID_RETRIES}).`);
+
+                if (unavailableIdRetries <= MAX_UNAVAILABLE_ID_RETRIES) {
+                    schedulePeerReinitialize(retryDelay);
+                } else {
+                    const newId = generatePeerId();
+                    console.warn('[Peer] Existing ID stayed unavailable. Falling back to a new generated ID:', newId);
+                    store.setPreferredPeerId(newId);
+                    store.setMyPeerId(newId);
+                    unavailableIdRetries = 0;
+                    schedulePeerReinitialize(250);
+                }
             }
         } else {
             // For other generic errors, ensure the UI isn't stuck "connecting" forever
@@ -140,6 +227,48 @@ const initializePeer = () => {
     });
 
     return peerInstance;
+};
+
+/**
+ * Handle auto-retry with exponential backoff
+ */
+const handleAutoRetry = () => {
+    if (reconnectInterval) return; // Already retrying
+
+    const store = useAppStore.getState();
+    if (store.activeConnections.length > 0) {
+        // Still have other connections, just try to reconnect to signaling
+        if (peerInstance && !peerInstance.destroyed) {
+            peerInstance.reconnect();
+        }
+        return;
+    }
+
+    const attemptReconnect = () => {
+        if (retryAttempt >= MAX_RETRY_ATTEMPTS) {
+            console.warn('[Retry] Max retry attempts reached. Stopping.');
+            clearInterval(reconnectInterval);
+            reconnectInterval = null;
+            return;
+        }
+
+        retryAttempt++;
+        useAppStore.getState().setRetryCount(retryAttempt);
+        const delay = getRetryDelay(retryAttempt);
+        console.log(`[Retry] Attempt ${retryAttempt}/${MAX_RETRY_ATTEMPTS} (next in ${delay}ms)`);
+
+        if (peerInstance && !peerInstance.destroyed) {
+            peerInstance.reconnect();
+        }
+    };
+
+    // Start with immediate attempt, then use interval
+    reconnectInterval = setInterval(() => {
+        attemptReconnect();
+    }, 5000);
+
+    // First retry immediately
+    attemptReconnect();
 };
 
 const MAX_PEERS = 3;
@@ -168,6 +297,21 @@ const setupConnectionHandlers = (conn, timeoutRef) => {
         console.log('[Conn] Opened with:', conn.peer);
         useAppStore.getState().addConnection(conn);
 
+        // Reset retry state on successful connection
+        retryAttempt = 0;
+        useAppStore.getState().setRetryCount(0);
+
+        // Send device info for friendly names
+        const deviceName = useAppStore.getState().deviceName;
+        conn.send({ type: 'SYSTEM', payload: { action: 'DEVICE_INFO', deviceName } });
+
+        // Detect LAN vs Relay connection type (with delay for ICE to stabilize)
+        setTimeout(async () => {
+            const connType = await detectConnectionType(conn);
+            console.log(`[Conn] Connection type detected: ${connType}`);
+            useAppStore.getState().setConnectionType(connType);
+        }, 2000);
+
         // --- Full Mesh: Broadcast Peer List ---
         // Need fresh state after addConnection
         const newStore = useAppStore.getState();
@@ -194,6 +338,43 @@ const setupConnectionHandlers = (conn, timeoutRef) => {
     conn.on('error', (err) => {
         console.error('[Conn] Error:', err);
     });
+
+    // If the connection is already open (e.g. from consent flow where open fired before handlers were set up),
+    // manually trigger the open logic now.
+    if (conn.open) {
+        console.log('[Conn] Connection already open, triggering open logic for:', conn.peer);
+        const currentStore = useAppStore.getState();
+
+        if (currentStore.activeConnections.length >= MAX_PEERS) {
+            console.log('[Conn] Room is full. Rejecting peer:', conn.peer);
+            conn.send({ type: 'SYSTEM', payload: { action: 'REJECT_FULL' } });
+            setTimeout(() => { try { conn.close(); } catch (e) { } }, 500);
+            return;
+        }
+
+        useAppStore.getState().addConnection(conn);
+        retryAttempt = 0;
+        useAppStore.getState().setRetryCount(0);
+
+        const deviceName = useAppStore.getState().deviceName;
+        conn.send({ type: 'SYSTEM', payload: { action: 'DEVICE_INFO', deviceName } });
+
+        setTimeout(async () => {
+            const connType = await detectConnectionType(conn);
+            console.log(`[Conn] Connection type detected: ${connType}`);
+            useAppStore.getState().setConnectionType(connType);
+        }, 2000);
+
+        const newStore = useAppStore.getState();
+        const activeConns = newStore.activeConnections;
+        const allPeerIds = [newStore.myPeerId, ...activeConns.map(c => c.peer)];
+        const uniquePeerIds = [...new Set(allPeerIds)];
+        activeConns.forEach(c => {
+            if (c.open) {
+                c.send({ type: 'SYSTEM', payload: { action: 'SYNC_PEERS', peers: uniquePeerIds } });
+            }
+        });
+    }
 };
 
 const handleIncomingData = (data) => {
@@ -233,6 +414,24 @@ const handleIncomingData = (data) => {
                 console.warn('[System] Connection rejected: Room is full.');
                 alert('ห้องเต็มแล้ว (จำกัดการส่งเป็นกลุ่มสูงสุด 3 เครื่อง) ❌');
                 store.removeConnection(data.payload.peer || "unknown");
+            } else if (data.payload?.action === 'REJECT_USER') {
+                console.warn('[System] Connection rejected by user.');
+                alert('อีกฝ่ายปฏิเสธการเชื่อมต่อ ❌');
+                store.removeConnection(data.payload.peer || "unknown");
+            } else if (data.payload?.action === 'DEVICE_INFO') {
+                // Store the peer's friendly device name
+                const peerId = data.payload.peerId;
+                const deviceName = data.payload.deviceName;
+                if (deviceName) {
+                    // Find which connection sent this
+                    const conns = useAppStore.getState().activeConnections;
+                    conns.forEach(c => {
+                        // The device info comes from the peer, match by checking who we know
+                        if (c.open) {
+                            store.setPeerDeviceName(c.peer, deviceName);
+                        }
+                    });
+                }
             } else if (data.payload?.action === 'SYNC_PEERS') {
                 const receivedPeers = data.payload?.peers || [];
                 const localId = store.myPeerId;
@@ -271,7 +470,12 @@ export const usePeerConnection = () => {
         connectionStatus,
         myPeerId,
         activeConnections,
-        remotePeerIds
+        remotePeerIds,
+        connectionType,
+        peerDeviceNames,
+        retryCount,
+        pendingIncomingConnection,
+        nameChangeError
     } = useAppStore();
 
     // Initialize peer on first hook usage (once globally)
@@ -358,6 +562,7 @@ export const usePeerConnection = () => {
                     peerInstance = null;
                 }
                 isInitialized = false;
+                retryAttempt = 0;
                 schedulePeerReinitialize();
             }, 500);
         } else {
@@ -366,6 +571,7 @@ export const usePeerConnection = () => {
                 peerInstance = null;
             }
             isInitialized = false;
+            retryAttempt = 0;
             schedulePeerReinitialize();
         }
     }, []);
@@ -377,9 +583,11 @@ export const usePeerConnection = () => {
         console.log('[Peer] Regenerating peer ID:', newId);
 
         unavailableIdRetries = 0;
+        retryAttempt = 0;
         store.resetConnectionSession();
         store.setPreferredPeerId(newId);
         store.setMyPeerId(newId);
+        store.setDeviceName(null); // Reset device name so it shows the new peer ID
 
         if (peerInstance) {
             try {
@@ -396,14 +604,118 @@ export const usePeerConnection = () => {
         return newId;
     }, []);
 
+    /**
+     * Change peer ID to a user-specified name.
+     * Sanitizes the input to be a valid PeerJS ID.
+     */
+    const changePeerId = useCallback((newName) => {
+        const trimmedName = newName.trim();
+        if (!trimmedName) return null;
+
+        const store = useAppStore.getState();
+
+        // Sanitize for PeerJS ID: lowercase, replace spaces with hyphens, remove invalid chars
+        let sanitized = trimmedName
+            .toLowerCase()
+            .replace(/\s+/g, '-')
+            .replace(/[^a-z0-9\-]/g, '')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
+
+        let newPeerId = sanitized;
+
+        // If after sanitize it's invalid (e.g. they typed purely Thai characters),
+        // we MUST generate a random PeerJS ID for connection (PeerJS doesn't support Thai IDs),
+        // but we will STILL save their Thai name as the Device Name.
+        if (!sanitized || sanitized.length < 2) {
+            newPeerId = generatePeerId();
+        }
+
+        // Don't change if it's the exact same ID and Name
+        if (newPeerId === store.myPeerId && trimmedName === store.deviceName) {
+            return { peerId: newPeerId, name: trimmedName };
+        }
+
+        console.log(`[Peer] Changing peer ID to: ${newPeerId}, device name to: ${trimmedName}`);
+
+        // Track this as user-initiated so we can revert on unavailable-id
+        previousPeerId = store.myPeerId;
+        isUserNameChange = true;
+
+        unavailableIdRetries = 0;
+        retryAttempt = 0;
+        store.setNameChangeError(null); // Clear any previous error
+        store.resetConnectionSession();
+        store.setPreferredPeerId(newPeerId);
+        store.setMyPeerId(newPeerId);
+        store.setDeviceName(trimmedName); // Save the actual name they typed (supports Thai)
+
+        if (peerInstance) {
+            try {
+                peerInstance.destroy();
+            } catch (err) {
+                console.error('[Peer] Failed to destroy peer:', err);
+            }
+            peerInstance = null;
+        }
+
+        isInitialized = false;
+        schedulePeerReinitialize();
+
+        return { peerId: newPeerId, name: trimmedName };
+    }, []);
+
+    /**
+     * Accept a pending incoming connection
+     */
+    const acceptIncomingConnection = useCallback(() => {
+        const store = useAppStore.getState();
+        const pending = store.pendingIncomingConnection;
+        if (!pending) return;
+
+        console.log('[Consent] Accepted connection from:', pending.peerId);
+        setupConnectionHandlers(pending.conn, { current: null });
+        store.clearPendingIncomingConnection();
+    }, []);
+
+    /**
+     * Reject a pending incoming connection
+     */
+    const rejectIncomingConnection = useCallback(() => {
+        const store = useAppStore.getState();
+        const pending = store.pendingIncomingConnection;
+        if (!pending) return;
+
+        console.log('[Consent] Rejected connection from:', pending.peerId);
+        try {
+            if (pending.conn.open) {
+                pending.conn.send({ type: 'SYSTEM', payload: { action: 'REJECT_USER', peer: store.myPeerId } });
+            }
+            setTimeout(() => {
+                try { pending.conn.close(); } catch (e) { }
+            }, 300);
+        } catch (e) {
+            console.error('[Consent] Error rejecting:', e);
+        }
+        store.clearPendingIncomingConnection();
+    }, []);
+
     return {
         connectionStatus,
         myPeerId,
         activeConnections,
         remotePeerIds,
+        connectionType,
+        peerDeviceNames,
+        retryCount,
+        pendingIncomingConnection,
+        nameChangeError,
         connectToPeer,
         regeneratePeerId,
+        changePeerId,
         disconnectPeer: manualDisconnect,
-        sendData
+        sendData,
+        acceptIncomingConnection,
+        rejectIncomingConnection
     };
 };

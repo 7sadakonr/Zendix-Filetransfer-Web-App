@@ -83,6 +83,8 @@ export const useFileTransfer = () => {
         try {
             let sentBytes = 0;
             let lastProgress = 0;
+            const startTime = Date.now();
+            let lastUpdate = startTime;
 
             await chunkFile(file, async (chunkData, offset) => {
                 const liveConnections = useAppStore.getState().activeConnections;
@@ -119,8 +121,22 @@ export const useFileTransfer = () => {
                 });
 
                 sentBytes += chunkData.byteLength;
-                lastProgress = Math.min(99, Math.round((sentBytes / file.size) * 100));
-                updateFileTransfer(transferId, { progress: lastProgress });
+
+                const now = Date.now();
+                if (now - lastUpdate > 500 || sentBytes === file.size) {
+                    const elapsed = (now - startTime) / 1000;
+                    const speed = elapsed > 0 ? sentBytes / elapsed : 0;
+                    const remaining = file.size - sentBytes;
+                    const eta = speed > 0 ? Math.ceil(remaining / speed) : 0;
+
+                    lastProgress = Math.min(99, Math.round((sentBytes / file.size) * 100));
+                    updateFileTransfer(transferId, {
+                        progress: lastProgress,
+                        speed,
+                        eta
+                    });
+                    lastUpdate = now;
+                }
             }, abortController.signal);
 
             sendData('FILE', {

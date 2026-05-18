@@ -7,13 +7,14 @@ import { useFileTransfer } from '../hooks/useFileTransfer';
 import { getDeviceName } from '../utils/platform';
 import { getFilesFromDataTransfer, getFilesFromFileList } from '../utils/fileCollection';
 import ClipboardToast from '../components/ClipboardToast';
-import { Clipboard, FileText, Copy, Check, Send, Upload, File, X, LogOut, Download, Image } from 'lucide-react';
+import ConnectionConsentModal from '../components/ConnectionConsentModal';
+import { Clipboard, FileText, Copy, Check, Send, Upload, File, X, LogOut, Download, Image, Wifi, Globe } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import clsx from 'clsx';
 
 const TransferPage = () => {
     const navigate = useNavigate();
-    const { sendData, disconnectPeer, connectToPeer } = usePeerConnection();
+    const { sendData, disconnectPeer, connectToPeer, connectionType, peerDeviceNames, retryCount, acceptIncomingConnection, rejectIncomingConnection, pendingIncomingConnection } = usePeerConnection();
     const { connectionStatus, remotePeerIds, clipboardHistory, myPeerId, previewImage, setPreviewImage } = useAppStore();
     const { pendingClipboardItem, confirmPendingCopy, clearPending, copySuccess } = useClipboardSync();
     const { sendFile, sendFiles, fileTransfers } = useFileTransfer();
@@ -75,11 +76,19 @@ const TransferPage = () => {
         }
     }, [connectionStatus, remotePeerIds, navigate, connectToPeer]);
 
-    // Get friendly name
+    // Get friendly name — use device names from peer info exchange
     const getFriendlyName = () => {
         if (!remotePeerIds || remotePeerIds.length === 0) return 'Unknown';
         if (remotePeerIds.length > 1) return `${remotePeerIds.length} peers connected`;
-        return remotePeerIds[0];
+        const peerId = remotePeerIds[0];
+        return peerDeviceNames[peerId] || peerId;
+    };
+
+    // Connection type badge text
+    const getConnectionBadge = () => {
+        if (connectionType === 'lan') return { label: 'LAN', icon: Wifi, color: 'text-emerald-400', bg: 'bg-emerald-400/10' };
+        if (connectionType === 'relay') return { label: 'Relay', icon: Globe, color: 'text-amber-400', bg: 'bg-amber-400/10' };
+        return null;
     };
 
     const handleSendText = () => {
@@ -436,10 +445,31 @@ const TransferPage = () => {
 
                     {/* Header */}
                     <div className="flex items-center justify-between shrink-0 mb-4">
-                        <h2 className="text-neutral-200 text-xl sm:text-2xl font-semibold" id="activity-heading">
-                            {connectionStatus === 'connecting' ? 'Reconnecting...' : 'Recent Activity'}
-                        </h2>
+                        <div>
+                            <h2 className="text-neutral-200 text-xl sm:text-2xl font-semibold" id="activity-heading">
+                                {connectionStatus === 'connecting' 
+                                    ? retryCount > 0 
+                                        ? `Retrying... (${retryCount})` 
+                                        : 'Reconnecting...' 
+                                    : 'Recent Activity'}
+                            </h2>
+                        </div>
                         <div className="flex items-center gap-2">
+                            {/* LAN/Relay Badge */}
+                            {connectionStatus === 'connected' && (() => {
+                                const badge = getConnectionBadge();
+                                if (!badge) return null;
+                                const BadgeIcon = badge.icon;
+                                return (
+                                    <span className={clsx(
+                                        "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold",
+                                        badge.color, badge.bg
+                                    )}>
+                                        <BadgeIcon size={10} />
+                                        {badge.label}
+                                    </span>
+                                );
+                            })()}
                             <div className={clsx(
                                 "w-2 h-2 rounded-full",
                                 connectionStatus === 'connected' ? "bg-emerald-500 animate-pulse" : "bg-amber-500 animate-pulse"
@@ -730,7 +760,6 @@ const TransferPage = () => {
                 </div>
             )}
 
-            {/* Custom scrollbar styles */}
             <style>{`
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 4px;
@@ -746,6 +775,13 @@ const TransferPage = () => {
                     background: rgba(255, 255, 255, 0.2);
                 }
             `}</style>
+
+            {/* Connection Consent Modal */}
+            <ConnectionConsentModal
+                pending={pendingIncomingConnection}
+                onAccept={acceptIncomingConnection}
+                onReject={rejectIncomingConnection}
+            />
         </main>
     );
 };
