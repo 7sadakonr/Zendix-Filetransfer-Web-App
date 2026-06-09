@@ -10,8 +10,11 @@ const QRScanner = ({ onScan }) => {
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [hasScanned, setHasScanned] = useState(false);
+    
+    const isScanningRef = useRef(false);
 
     const stopCamera = useCallback(() => {
+        isScanningRef.current = false;
         if (animationRef.current) {
             cancelAnimationFrame(animationRef.current);
             animationRef.current = null;
@@ -20,16 +23,21 @@ const QRScanner = ({ onScan }) => {
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
         }
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
+        }
     }, []);
 
     const scanQRCode = useCallback(() => {
-        if (hasScanned) return;
+        if (hasScanned || !isScanningRef.current) return;
 
         const video = videoRef.current;
         const canvas = canvasRef.current;
 
         if (!video || !canvas || video.readyState !== video.HAVE_ENOUGH_DATA) {
-            animationRef.current = requestAnimationFrame(scanQRCode);
+            if (isScanningRef.current) {
+                animationRef.current = requestAnimationFrame(scanQRCode);
+            }
             return;
         }
 
@@ -43,6 +51,8 @@ const QRScanner = ({ onScan }) => {
 
         // Dynamic import
         import('jsqr').then(jsQRModule => {
+            if (!isScanningRef.current) return;
+            
             const jsQR = jsQRModule.default;
             const code = jsQR(imageData.data, imageData.width, imageData.height, {
                 inversionAttempts: "dontInvert"
@@ -50,12 +60,15 @@ const QRScanner = ({ onScan }) => {
 
             if (code && code.data) {
                 setHasScanned(true);
+                isScanningRef.current = false;
                 if (onScan) onScan(code.data);
             }
 
             // Loop only if not scanned (or keep scanning? Logic says stop if scanned)
             if (!code || !code.data) {
-                animationRef.current = requestAnimationFrame(scanQRCode);
+                if (isScanningRef.current) {
+                    animationRef.current = requestAnimationFrame(scanQRCode);
+                }
             }
         });
 
@@ -96,6 +109,7 @@ const QRScanner = ({ onScan }) => {
                     await videoRef.current.play();
 
                     setIsLoading(false);
+                    isScanningRef.current = true;
                     scanQRCode();
                 }
             } catch (err) {

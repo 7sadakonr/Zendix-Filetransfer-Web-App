@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-30T14:10:00Z",
+  "title": "Design System: Zendix",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Liquid Cyan",
+        "canonical": "oklch(63% 0.22 230)",
+        "tonalRamp": [
+          "#003642",
+          "#005f73",
+          "#0a8fa7",
+          "#06b6d4",
+          "#4ecde6",
+          "#8ae2f2",
+          "#c2f3fc",
+          "#eafbfe"
+        ]
+      },
+      "neutral-bg": {
+        "role": "neutral",
+        "displayName": "Deep Charcoal",
+        "canonical": "oklch(20% 0.00 0)",
+        "tonalRamp": [
+          "#0f0f0f",
+          "#1a1a1a",
+          "#333333",
+          "#595959",
+          "#808080",
+          "#a6a6a6",
+          "#cccccc",
+          "#f2f2f2"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Primary section title within glass panels."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Readable workspace and transfer logs."
+      }
+    },
+    "shadows": [
+      {
+        "name": "ambient-low",
+        "value": "0 8px 32px rgba(0, 0, 0, 0.4)",
+        "purpose": "Rest state card layering."
+      },
+      {
+        "name": "active-lift",
+        "value": "0 14px 34px rgba(0, 0, 0, 0.32)",
+        "purpose": "Focus or active modal lift."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+        "purpose": "Tactile state scale & color transitions (150-250ms)."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "md",
+        "value": "768px",
+        "purpose": "Grid stacking breakpoint."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary action button for pairing and connections.",
+      "html": "<button class=\"ds-btn-primary\">Connect Device</button>",
+      "css": ".ds-btn-primary { background: #ffffff; color: #1f2937; padding: 10px 20px; font-size: 15px; font-weight: 600; border: none; border-radius: 8px; font-family: Inter, sans-serif; cursor: pointer; transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.25s ease; } .ds-btn-primary:hover { transform: scale(1.02); box-shadow: 0 4px 20px rgba(255, 255, 255, 0.15); } .ds-btn-primary:active { transform: scale(0.98); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Secondary actions or cancel actions.",
+      "html": "<button class=\"ds-btn-secondary\">Cancel Connection</button>",
+      "css": ".ds-btn-secondary { background: rgba(255, 255, 255, 0.05); color: #ffffff; padding: 10px 20px; font-size: 15px; font-weight: 500; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-family: Inter, sans-serif; cursor: pointer; transition: background 0.25s, border-color 0.25s; } .ds-btn-secondary:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }"
+    },
+    {
+      "name": "Glass Container",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Standard translucent capsule container.",
+      "html": "<div class=\"ds-card-glass\"><h3 class=\"ds-card-title\">Identity</h3><p class=\"ds-card-text\">Devices on the same network can pair directly.</p></div>",
+      "css": ".ds-card-glass { background: rgba(42, 42, 42, 0.7); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 24px; padding: 24px; font-family: Inter, sans-serif; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); } .ds-card-title { color: #e5e5e5; font-size: 18px; font-weight: 600; margin: 0 0 8px 0; } .ds-card-text { color: #a3a3a3; font-size: 14px; margin: 0; line-height: 1.5; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Input field for pairing IDs.",
+      "html": "<input type=\"text\" class=\"ds-input-text\" placeholder=\"astro-77\">",
+      "css": ".ds-input-text { background: #ffffff; color: #374151; padding: 10px 14px; font-size: 15px; font-weight: 500; border: none; border-radius: 8px; font-family: Inter, sans-serif; outline: none; width: 100%; box-sizing: border-box; transition: box-shadow 0.25s, transform 0.2s; } .ds-input-text:focus { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15); transform: scale(1.01); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Liquid Capsule",
+    "overview": "Zendix utilizes a modern, dark 'liquid glass' visual philosophy designed to mimic the feeling of high-speed fluid connectivity. Interactive panels resemble translucent glass containers holding floating, animated fluid cores (QR codes, state pulses, and loading shimmers) that shift dynamically to represent direct WebRTC connection states.",
+    "keyCharacteristics": [
+      "Refractive Depth through translucent panels with blur filters (backdrop-blur-2xl)",
+      "Dynamic Fluidity from low-intensity keyframe animations representing active peer-to-peer circuit",
+      "Tactile Feedback on hover/focus states to simulate physical elevation",
+      "Tighter Information Density designed strictly for speed and utility"
+    ],
+    "rules": [
+      {
+        "name": "The Restrained Accent Rule",
+        "body": "The active Liquid Cyan accent must never exceed 10% of any screen's surface area.",
+        "section": "colors"
+      },
+      {
+        "name": "The No-Faded-Ink Rule",
+        "body": "Muted gray text on any dark background must maintain a contrast ratio of at least 4.5:1.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tighter Ratio Rule",
+        "body": "Keep font steps between 1.125 and 1.2. Product interfaces require dense information hierarchy.",
+        "section": "typography"
+      },
+      {
+        "name": "The Glass Stack Rule",
+        "body": "Glass layers are layered sequentially. Dropdowns/modals sit on the absolute top with a dark backdrop-mask.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use strict dark-mode-first styling to sustain a premium, technical aesthetic.",
+      "Do verify text contrast of ash-gray labels (#a3a3a3) against dark container surfaces.",
+      "Do implement fast transition timings of 150-250ms for hover, focus, and state switches.",
+      "Do include screen-reader-only text (sr-only) on non-prose buttons and indicators."
+    ],
+    "donts": [
+      "Don't use colored side-stripe borders as accents on cards or notifications.",
+      "Don't use gradient text under any circumstances.",
+      "Don't animate img elements or their direct wrappers on hover.",
+      "Don't let text overflow grids or container cards."
+    ]
+  }
+}
