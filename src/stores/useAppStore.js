@@ -25,6 +25,21 @@ const useAppStore = create(
             setPreferredPeerId: (id) => set({ preferredPeerId: id }),
             setDeviceName: (name) => set({ deviceName: name }),
 
+            // Trusted Devices
+            trustedDevices: [], // { peerId, deviceName, lastConnected }
+            addTrustedDevice: (peerId, deviceName) => set((state) => {
+                const existing = state.trustedDevices.filter(d => d.peerId !== peerId);
+                return {
+                    trustedDevices: [
+                        { peerId, deviceName, lastConnected: Date.now() },
+                        ...existing
+                    ].slice(0, 5) // Keep last 5 devices
+                };
+            }),
+            removeTrustedDevice: (peerId) => set((state) => ({
+                trustedDevices: state.trustedDevices.filter(d => d.peerId !== peerId)
+            })),
+
             // Connection
             connectionStatus: 'disconnected', // disconnected, connecting, connected
             remotePeerIds: [],
@@ -33,6 +48,8 @@ const useAppStore = create(
             peerDeviceNames: {}, // Map<peerId, deviceName>
             retryCount: 0, // Current retry attempt count
             nameChangeError: null, // Error message when name change fails (e.g. 'taken')
+            toastMessage: null,
+            setToastMessage: (msg) => set({ toastMessage: msg }),
             setConnectionStatus: (status) => set({ connectionStatus: status }),
             setConnectionType: (type) => set({ connectionType: type }),
             setRetryCount: (count) => set({ retryCount: count }),
@@ -134,6 +151,7 @@ const useAppStore = create(
                 deviceName: state.deviceName,
                 remotePeerIds: state.remotePeerIds || (state.remotePeerId ? [state.remotePeerId] : []),
                 clipboardHistory: state.clipboardHistory,
+                trustedDevices: state.trustedDevices || [],
             }), // Only save these fields
         }
     )

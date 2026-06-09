@@ -3,11 +3,14 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover" />
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover" />
 
   <title>Zendix - Fast P2P File Transfer and Clipboard Sync | No Cloud, No Sign-up</title>
-  <meta name="description" content="Zendix lets you transfer files and sync clipboard content directly between devices with secure peer-to-peer connections. Fast, web-based sharing for iOS, Android, Windows, and Mac." />
-  <meta name="keywords" content="zendix, file transfer, clipboard sync, clipboard sharing, p2p transfer, peer to peer, send files, QR code connect, WebRTC, no cloud, encrypted transfer, cross platform" />
+  <meta name="description"
+    content="Zendix lets you transfer files and sync clipboard content directly between devices with secure peer-to-peer connections. Fast, web-based sharing for iOS, Android, Windows, and Mac." />
+  <meta name="keywords"
+    content="zendix, file transfer, clipboard sync, clipboard sharing, p2p transfer, peer to peer, send files, QR code connect, WebRTC, no cloud, encrypted transfer, cross platform" />
   <meta name="author" content="7sadakonr" />
   <meta name="robots" content="index, follow" />
   <meta name="theme-color" content="#1a1a1a" />
@@ -19,7 +22,8 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://zendix.vercel.app/" />
   <meta property="og:title" content="Zendix - Fast P2P File Transfer and Clipboard Sync" />
-  <meta property="og:description" content="Zendix lets you transfer files and sync clipboard content directly between devices with secure peer-to-peer connections. Fast, web-based sharing for iOS, Android, Windows, and Mac." />
+  <meta property="og:description"
+    content="Zendix lets you transfer files and sync clipboard content directly between devices with secure peer-to-peer connections. Fast, web-based sharing for iOS, Android, Windows, and Mac." />
   <meta property="og:image" content="https://zendix.vercel.app/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -29,7 +33,8 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:url" content="https://zendix.vercel.app/" />
   <meta name="twitter:title" content="Zendix - Fast P2P File Transfer and Clipboard Sync" />
-  <meta name="twitter:description" content="Zendix lets you transfer files and sync clipboard content directly between devices with secure peer-to-peer connections." />
+  <meta name="twitter:description"
+    content="Zendix lets you transfer files and sync clipboard content directly between devices with secure peer-to-peer connections." />
   <meta name="twitter:image" content="https://zendix.vercel.app/og-image.png" />
 
   <link rel="icon" type="image/svg+xml" href="/icon.svg" />
@@ -108,17 +113,137 @@
         opacity: 1;
       }
     }
+
+    .loading-card-shimmer {
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+      background-image: linear-gradient(135deg,
+          rgba(78, 78, 78, 0.82) 0%,
+          rgba(64, 64, 64, 0.76) 100%);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+    }
+
+    .loading-card-shimmer::after {
+      content: "";
+      position: absolute;
+      inset: -20%;
+      border-radius: inherit;
+      transform: translateX(-130%) skewX(-16deg);
+      background: linear-gradient(90deg,
+          rgba(255, 255, 255, 0) 0%,
+          rgba(170, 170, 170, 0.04) 20%,
+          rgba(210, 210, 210, 0.16) 46%,
+          rgba(130, 130, 130, 0.14) 56%,
+          rgba(170, 170, 170, 0.05) 72%,
+          rgba(255, 255, 255, 0) 100%);
+      filter: blur(12px);
+      animation: liquidGlassSweep 1.9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+      pointer-events: none;
+    }
+
+    .loading-card-shimmer-delay::after {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes liquidGlassSweep {
+      0% {
+        transform: translateX(-130%) skewX(-16deg);
+      }
+      100% {
+        transform: translateX(200%) skewX(-16deg);
+      }
+    }
   </style>
 </head>
 
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <div
+      class="relative min-h-[100dvh] w-full flex flex-col px-4 sm:px-6 lg:px-8 py-[calc(1rem+env(safe-area-inset-top))] sm:py-[calc(1.5rem+env(safe-area-inset-top))] lg:py-[calc(2rem+env(safe-area-inset-top))] bg-[#1a1a1a] overflow-hidden">
+      <div class="fixed top-0 left-0 w-full h-[env(safe-area-inset-top)] bg-[#1a1a1a] z-50 pointer-events-none"></div>
+      <div class="fixed inset-0 pointer-events-none">
+        <div
+          class="absolute top-[-10%] left-[-10%] w-[60vw] min-w-[300px] aspect-square rounded-full opacity-20 blur-[80px] sm:blur-[100px]"
+          style="background: radial-gradient(circle, rgba(120, 120, 120, 0.09) 0%, transparent 70%)"></div>
+        <div
+          class="absolute top-[60%] right-[-10%] w-[60vw] min-w-[300px] aspect-square rounded-full opacity-20 blur-[80px] sm:blur-[100px]"
+          style="background: radial-gradient(circle, rgba(96, 96, 96, 0.08) 0%, transparent 70%)"></div>
+      </div>
+      <div
+        class="relative z-10 flex flex-col md:flex-row gap-3 sm:gap-4 lg:gap-8 w-full max-w-[560px] lg:max-w-[800px] justify-center items-stretch mx-auto md:m-auto">
+        <div
+          class="relative rounded-[18px] sm:rounded-[24px] lg:rounded-[32px] p-3.5 sm:p-5 lg:p-8 w-full md:w-[280px] lg:w-[380px] flex flex-col flex-1 md:flex-none min-h-0 backdrop-blur-2xl border border-white/[0.15] overflow-hidden loading-card-shimmer"
+          style="background: rgba(42, 42, 42, 0.7); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);">
+          <div class="relative z-[2] flex flex-col flex-1 min-h-0">
+            <div class="relative flex justify-between items-center shrink-0">
+              <div class="h-6 w-36 rounded-full bg-black/20 loading-card-shimmer"></div>
+              <div class="h-5 w-14 rounded-full bg-black/20 loading-card-shimmer loading-card-shimmer-delay"></div>
+            </div>
+            <div class="relative w-full h-px my-2.5 sm:my-4 shrink-0"
+              style="background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 50%, transparent 100%)">
+            </div>
+            <div class="relative flex-1 flex flex-col items-center justify-center min-h-0">
+              <div
+                class="w-36 h-36 sm:w-40 sm:h-40 md:w-40 md:h-40 lg:w-48 lg:h-48 rounded-[28px] sm:rounded-[32px] bg-black/20 loading-card-shimmer shrink-0">
+              </div>
+              <div
+                class="mt-2.5 sm:mt-4 h-6 sm:h-7 lg:h-8 w-40 sm:w-44 rounded-full bg-black/20 loading-card-shimmer loading-card-shimmer-delay shrink-0">
+              </div>
+            </div>
+            <div class="relative w-full h-px my-2.5 sm:my-4 shrink-0"
+              style="background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 50%, transparent 100%)">
+            </div>
+            <div class="relative flex items-center justify-between gap-4 shrink-0 min-h-[76px] px-2 sm:px-3 py-2">
+              <div class="min-w-0 flex-1">
+                <div class="mb-2 h-2.5 w-20 rounded-full bg-black/20 loading-card-shimmer"></div>
+                <div
+                  class="h-5 w-full max-w-[180px] rounded-full bg-black/20 loading-card-shimmer loading-card-shimmer-delay">
+                </div>
+              </div>
+              <div class="h-8 w-8 rounded-lg bg-black/20 loading-card-shimmer shrink-0"></div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="relative rounded-[20px] sm:rounded-[24px] lg:rounded-[32px] p-4 sm:p-5 lg:p-8 w-full md:w-[280px] lg:w-[380px] flex flex-col flex-1 md:flex-none min-h-0 backdrop-blur-2xl border border-white/[0.15] overflow-hidden loading-card-shimmer loading-card-shimmer-delay"
+          style="background: rgba(42, 42, 42, 0.7); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);">
+          <div class="relative z-[2] flex flex-col flex-1 min-h-0">
+            <div class="h-6 w-40 rounded-full bg-black/20 loading-card-shimmer shrink-0"></div>
+            <div class="relative w-full h-px my-3 sm:my-4 shrink-0"
+              style="background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 50%, transparent 100%)">
+            </div>
+            <div class="relative mb-2 sm:mb-3 shrink-0">
+              <div class="mb-2 h-2.5 w-16 rounded-full bg-black/20 loading-card-shimmer"></div>
+              <div class="h-[46px] w-full rounded-lg bg-black/20 loading-card-shimmer loading-card-shimmer-delay"></div>
+            </div>
+            <div class="mb-3 sm:mb-4 h-[46px] w-full rounded-lg bg-black/20 loading-card-shimmer shrink-0"></div>
+            <div class="relative flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 shrink-0">
+              <div class="flex-1 h-px bg-white/10"></div>
+              <div class="h-3 w-8 rounded-full bg-black/20 loading-card-shimmer loading-card-shimmer-delay"></div>
+              <div class="flex-1 h-px bg-white/10"></div>
+            </div>
+            <div class="h-[46px] w-full rounded-lg bg-black/20 loading-card-shimmer shrink-0"></div>
+            <div class="relative flex-1 flex items-end min-h-0">
+              <div
+                class="mx-auto mb-1 h-4 w-52 rounded-full bg-black/20 loading-card-shimmer loading-card-shimmer-delay">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   <script type="module" src="/src/main.jsx"></script>
 
   <noscript>
-    <div style="max-width: 800px; margin: 40px auto; padding: 20px; font-family: Inter, system-ui, sans-serif; color: #e5e5e5; background: #1a1a1a;">
+    <div
+      style="max-width: 800px; margin: 40px auto; padding: 20px; font-family: Inter, system-ui, sans-serif; color: #e5e5e5; background: #1a1a1a;">
       <h1>Zendix - Fast P2P File Transfer and Clipboard Sync</h1>
-      <p>Zendix lets you transfer files and sync clipboard content directly between devices with secure peer-to-peer connections. Fast, web-based sharing for iOS, Android, Windows, and Mac.</p>
+      <p>Zendix lets you transfer files and sync clipboard content directly between devices with secure peer-to-peer
+        connections. Fast, web-based sharing for iOS, Android, Windows, and Mac.</p>
       <h2>Key Features</h2>
       <ul>
         <li><strong>End-to-End Encrypted</strong> - Direct P2P connection, no server storage</li>
@@ -137,6 +262,9 @@
       <p>Source code is available in the Zendix repository.</p>
     </div>
   </noscript>
+  <!-- impeccable-live-start -->
+  <script src="http://localhost:8400/live.js"></script>
+  <!-- impeccable-live-end -->
 </body>
 
 </html>

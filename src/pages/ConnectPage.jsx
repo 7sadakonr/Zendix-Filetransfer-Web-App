@@ -1,12 +1,35 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { usePeerConnection } from '../hooks/usePeerConnection';
 import useAppStore from '../stores/useAppStore';
 import ConnectModal from '../components/ConnectModal';
 import ConnectionConsentModal from '../components/ConnectionConsentModal';
+import ConnectionWaitingModal from '../components/ConnectionWaitingModal';
 import { Camera, Copy, Check, Pencil } from 'lucide-react';
 import AnimatedQRCode from '../components/AnimatedQRCode';
 const logoSrc = '/logo.svg';
+
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1,
+            delayChildren: 0.1
+        }
+    }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 20, filter: 'blur(4px)' },
+    visible: {
+        opacity: 1,
+        y: 0,
+        filter: 'blur(0px)',
+        transition: { duration: 0.5, ease: [0.25, 1, 0.5, 1] }
+    }
+};
 
 const ConnectPage = () => {
     const navigate = useNavigate();
@@ -81,14 +104,16 @@ const ConnectPage = () => {
     };
 
     const handleConnect = () => {
-        if (!remoteIdInput.trim()) return;
+        const trimmedInput = remoteIdInput.trim();
+        if (!trimmedInput) return;
 
-        // Auto-format: Remove whitespaces, make lowercase, and insert hyphen if missing
-        let formattedId = remoteIdInput.trim().toLowerCase().replace(/\s+/g, '');
-        if (!formattedId.includes('-')) {
-            const match = formattedId.match(/^([a-z]+)(\d+)$/);
+        let formattedId = trimmedInput;
+
+        // Auto-format default generated IDs (e.g. "astro77" -> "astro-77")
+        if (!formattedId.includes('-') && !formattedId.includes(' ')) {
+            const match = formattedId.match(/^([a-zA-Z]+)(\d+)$/);
             if (match) {
-                formattedId = `${match[1]}-${match[2]}`;
+                formattedId = `${match[1].toLowerCase()}-${match[2]}`;
             }
         }
 
@@ -105,7 +130,7 @@ const ConnectPage = () => {
         : '';
 
     return (
-        <main aria-label="Zendix - Connect to a peer device" className="fixed inset-0 flex flex-col md:flex-row md:items-center md:justify-center px-4 sm:px-6 lg:px-8 pt-[calc(1rem+env(safe-area-inset-top))] sm:pt-[calc(1.5rem+env(safe-area-inset-top))] lg:pt-[calc(2rem+env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:pb-[max(2rem,env(safe-area-inset-bottom))] font-['Inter'] overflow-hidden">
+        <main aria-label="Zendix - Connect to a peer device" className="relative min-h-[100dvh] w-full flex flex-col px-4 sm:px-6 lg:px-8 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pt-[calc(2rem+env(safe-area-inset-top))] sm:pb-[calc(2rem+env(safe-area-inset-bottom))] lg:pt-[calc(2.5rem+env(safe-area-inset-top))] lg:pb-[calc(2.5rem+env(safe-area-inset-bottom))] font-['Inter'] overflow-x-hidden">
             {/* Safe Area Top Mask to guarantee solid status bar color */}
             <div className="fixed top-0 left-0 w-full h-[env(safe-area-inset-top)] bg-[#1a1a1a] z-50 pointer-events-none"></div>
             {/* SEO: Hidden h1 for search engines */}
@@ -118,10 +143,15 @@ const ConnectPage = () => {
                     style={{ background: 'radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%)' }} />
             </div>
 
-            <div className="relative z-10 flex flex-col md:flex-row gap-3 sm:gap-4 lg:gap-8 w-full max-w-[560px] lg:max-w-[800px] h-full md:h-auto justify-center items-stretch mx-auto">
+            <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="relative z-10 flex flex-col md:flex-row gap-3 sm:gap-4 lg:gap-8 w-full max-w-[560px] lg:max-w-[800px] justify-center items-stretch mx-auto md:m-auto"
+            >
 
                 {/* Your Identity Card */}
-                <div className="relative group rounded-[18px] sm:rounded-[24px] lg:rounded-[32px] p-3.5 sm:p-5 lg:p-8 w-full md:w-[280px] lg:w-[380px] flex flex-col flex-1 md:flex-none min-h-0 backdrop-blur-2xl border border-white/[0.15] overflow-hidden"
+                <motion.div variants={itemVariants} className="relative group rounded-[18px] sm:rounded-[24px] lg:rounded-[32px] p-3.5 sm:p-5 lg:p-8 w-full md:w-[280px] lg:w-[380px] flex flex-col flex-1 md:flex-none min-h-0 backdrop-blur-2xl border border-white/[0.15] overflow-hidden"
                     style={{
                         background: 'rgba(42, 42, 42, 0.7)',
                         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
@@ -151,26 +181,11 @@ const ConnectPage = () => {
                         <button
                             type="button"
                             onClick={copyMyId}
-                            className="relative w-36 h-36 sm:w-40 sm:h-40 md:w-40 md:h-40 lg:w-48 lg:h-48 bg-white rounded-[28px] sm:rounded-[32px] flex items-center justify-center shrink-0 p-2"
+                            className="relative w-36 h-36 sm:w-40 sm:h-40 md:w-40 md:h-40 lg:w-48 lg:h-48 bg-white rounded-[28px] sm:rounded-[32px] flex items-center justify-center shrink-0 p-2 transition-all duration-300 ease-out hover:scale-[1.03] hover:shadow-[0_10px_28px_rgba(0,0,0,0.3)] active:scale-[0.98]"
                             title="Copy device ID"
                             aria-label="Copy device ID"
                             style={{
-                                transition: 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease',
                                 boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'scale(1.03)';
-                                e.currentTarget.style.boxShadow = '0 10px 28px rgba(0, 0, 0, 0.3)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'scale(1)';
-                                e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.25)';
-                            }}
-                            onMouseDown={(e) => {
-                                e.currentTarget.style.transform = 'scale(0.98)';
-                            }}
-                            onMouseUp={(e) => {
-                                e.currentTarget.style.transform = 'scale(1.03)';
                             }}
                         >
                             {qrUrl ? (
@@ -183,7 +198,7 @@ const ConnectPage = () => {
                                     className="w-full h-full rounded-[20px] sm:rounded-[24px]"
                                 />
                             ) : (
-                                <div className="w-full h-full bg-neutral-200 rounded-[20px] sm:rounded-[24px] animate-pulse" />
+                                <div className="w-full h-full rounded-[20px] sm:rounded-[24px] loading-card-shimmer" />
                             )}
                         </button>
 
@@ -209,7 +224,11 @@ const ConnectPage = () => {
                             ) : (
                                 <>
                                     <span className="text-neutral-200 text-base sm:text-xl lg:text-2xl font-semibold text-center">
-                                        {deviceName || myPeerId || 'Initializing...'}
+                                        {deviceName || myPeerId ? (
+                                            deviceName || myPeerId
+                                        ) : (
+                                            <div className="h-6 sm:h-7 lg:h-8 w-32 rounded-md loading-card-shimmer inline-block align-middle" />
+                                        )}
                                     </span>
                                     <button
                                         onClick={() => setIsEditingName(true)}
@@ -224,63 +243,40 @@ const ConnectPage = () => {
                         </div>
                     </div>
 
-                    {/* Divider */}
-                    <div className="relative w-full h-px my-2.5 sm:my-4 shrink-0"
-                        style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)' }} />
+                    <div className="relative mt-auto shrink-0">
+                        {/* Divider */}
+                        <div className="w-full h-px my-3 sm:my-4 shrink-0"
+                            style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)' }} />
 
-                    {/* Device ID Section */}
-                    <div className="relative flex justify-between items-center shrink-0">
+                        {/* Device ID Section */}
                         <button
                             type="button"
                             onClick={copyMyId}
-                            className="min-w-0 flex-1 text-left rounded-lg transition-colors hover:bg-white/5 -ml-1.5 sm:-ml-2 px-1.5 sm:px-2 py-1"
+                            className="group relative flex justify-between items-center w-full text-left shrink-0 min-h-[76px] px-2 sm:px-3 py-2 rounded-xl transition-all duration-200 hover:bg-white/5"
                             title="Copy device ID"
                             aria-label="Copy device ID"
                         >
-                            <div className="text-zinc-500 text-[9px] sm:text-xs font-medium tracking-[0.2em] sm:tracking-widest uppercase mb-1">
-                                DEVICE ID
-                            </div>
-                            <div className="text-neutral-200 text-[15px] sm:text-base font-medium truncate">
-                                {deviceName || myPeerId || 'Generating...'}
-                            </div>
-                            {deviceName && myPeerId && (
-                                <div className="text-zinc-600 text-[10px] sm:text-xs font-mono mt-0.5 truncate">
-                                    {myPeerId}
+                            <div className="min-w-0 flex-1">
+                                <div className="text-zinc-500 text-[9px] sm:text-xs font-medium tracking-[0.2em] sm:tracking-widest uppercase mb-1">
+                                    DEVICE ID
                                 </div>
-                            )}
-                        </button>
-                        <button
-                            onClick={copyMyId}
-                            aria-label={copied ? 'Device ID copied' : 'Copy device ID to clipboard'}
-                            className="p-1.5 sm:p-2 rounded-lg shrink-0"
-                            style={{
-                                color: copied ? '#34d399' : 'rgba(163, 163, 163, 1)',
-                                background: copied ? 'rgba(52, 211, 153, 0.1)' : 'transparent',
-                                transition: 'all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                            }}
-                            onMouseEnter={(e) => {
-                                if (!copied) {
-                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                                    e.currentTarget.style.color = '#ffffff';
-                                    e.currentTarget.style.transform = 'scale(1.05)';
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (!copied) {
-                                    e.currentTarget.style.background = 'transparent';
-                                    e.currentTarget.style.color = 'rgba(163, 163, 163, 1)';
-                                    e.currentTarget.style.transform = 'scale(1)';
-                                }
-                            }}
-                            title={copied ? 'Copied!' : 'Copy ID'}
-                        >
-                            {copied ? <Check size={16} /> : <Copy size={16} />}
+                                <div className="text-neutral-200 text-[15px] sm:text-base font-medium truncate group-hover:text-white transition-colors">
+                                    {deviceName || myPeerId ? (
+                                        deviceName || myPeerId
+                                    ) : (
+                                        <div className="h-5 w-24 rounded loading-card-shimmer mt-0.5" />
+                                    )}
+                                </div>
+                            </div>
+                            <div className={`shrink-0 ml-4 flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-300 text-neutral-400 opacity-50 group-hover:text-white group-hover:opacity-100 ${copied ? '!text-[#34d399] !bg-[rgba(52,211,153,0.1)] !opacity-100' : ''}`}>
+                                {copied ? <Check size={16} /> : <Copy size={16} />}
+                            </div>
                         </button>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Connect to Peer Card */}
-                <div className="relative group rounded-[20px] sm:rounded-[24px] lg:rounded-[32px] p-4 sm:p-5 lg:p-8 w-full md:w-[280px] lg:w-[380px] flex flex-col flex-1 md:flex-none min-h-0 backdrop-blur-2xl border border-white/[0.15] overflow-hidden"
+                <motion.div variants={itemVariants} className="relative group rounded-[20px] sm:rounded-[24px] lg:rounded-[32px] p-4 sm:p-5 lg:p-8 w-full md:w-[280px] lg:w-[380px] flex flex-col flex-1 md:flex-none min-h-0 backdrop-blur-2xl border border-white/[0.15] overflow-hidden"
                     style={{
                         background: 'rgba(42, 42, 42, 0.7)',
                         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
@@ -328,30 +324,7 @@ const ConnectPage = () => {
                         onClick={handleConnect}
                         disabled={!remoteIdInput.trim()}
                         aria-label="Connect to peer device"
-                        className="w-full bg-white text-zinc-800 rounded-lg py-2.5 text-sm sm:text-base font-semibold mb-3 sm:mb-4 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
-                        style={{
-                            transition: 'all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                        }}
-                        onMouseEnter={(e) => {
-                            if (!e.currentTarget.disabled) {
-                                e.currentTarget.style.transform = 'scale(1.02)';
-                                e.currentTarget.style.boxShadow = '0 4px 20px rgba(255, 255, 255, 0.15)';
-                            }
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'scale(1)';
-                            e.currentTarget.style.boxShadow = 'none';
-                        }}
-                        onMouseDown={(e) => {
-                            if (!e.currentTarget.disabled) {
-                                e.currentTarget.style.transform = 'scale(0.98)';
-                            }
-                        }}
-                        onMouseUp={(e) => {
-                            if (!e.currentTarget.disabled) {
-                                e.currentTarget.style.transform = 'scale(1.02)';
-                            }
-                        }}
+                        className="w-full bg-white text-zinc-800 rounded-lg py-2.5 text-sm sm:text-base font-semibold mb-3 sm:mb-4 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-[250ms] ease-out hover:enabled:scale-[1.02] hover:enabled:shadow-[0_4px_20px_rgba(255,255,255,0.15)] active:enabled:scale-[0.98]"
                     >
                         Connect
                     </button>
@@ -367,54 +340,25 @@ const ConnectPage = () => {
                     <button
                         onClick={() => setShowScanner(true)}
                         aria-label="Scan QR code to connect"
-                        className="w-full bg-[#3a3a3a] text-white rounded-lg py-2.5 text-sm sm:text-base font-medium flex items-center justify-center gap-2 shrink-0"
-                        style={{
-                            transition: 'all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#444444';
-                            e.currentTarget.style.transform = 'scale(1.02)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = '#3a3a3a';
-                            e.currentTarget.style.transform = 'scale(1)';
-                        }}
-                        onMouseDown={(e) => {
-                            e.currentTarget.style.transform = 'scale(0.98)';
-                        }}
-                        onMouseUp={(e) => {
-                            e.currentTarget.style.transform = 'scale(1.02)';
-                        }}
+                        className="w-full bg-[#3a3a3a] text-white rounded-lg py-2.5 text-sm sm:text-base font-medium flex items-center justify-center gap-2 shrink-0 transition-all duration-[250ms] ease-out hover:bg-[#444444] hover:scale-[1.02] active:scale-[0.98]"
                     >
                         <Camera size={14} />
                         Scan
                     </button>
 
                     <div className="relative mt-auto shrink-0">
-                        <div className="w-full h-px my-3 sm:my-4"
+                        <div className="w-full h-px my-3 sm:my-4 shrink-0"
                             style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)' }} />
 
                         {/* Hint Text */}
-                        <div className="px-2 py-1.5 min-h-[48px] flex flex-col items-center justify-start">
-                            <div className="text-[10px] sm:text-xs font-medium tracking-widest uppercase mb-1 opacity-0 select-none">
-                                DEVICE ID
-                            </div>
-                            <p className="text-zinc-500 text-sm sm:text-base font-medium text-center w-full leading-none">
+                        <div className="px-2 sm:px-3 py-2 min-h-[76px] flex flex-col items-center justify-center">
+                            <p className="text-zinc-500 text-sm sm:text-base font-medium text-center w-full leading-tight">
                                 Enter peer ID or scan QR to connect
                             </p>
                         </div>
                     </div>
-
-                    {/* Connecting State */}
-                    {connectionStatus === 'connecting' && (
-                        <div className="relative mt-2 flex items-center justify-center gap-2 py-2 shrink-0 rounded-xl border border-amber-500/30"
-                            style={{ background: 'rgba(245, 158, 11, 0.1)' }}>
-                            <div className="w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-                            <span className="text-amber-400 text-xs font-medium">Connecting...</span>
-                        </div>
-                    )}
-                </div>
-            </div>
+                </motion.div>
+            </motion.div>
 
             {/* Scanner Modal */}
             {showScanner && (
@@ -433,6 +377,15 @@ const ConnectPage = () => {
                 pending={pendingIncomingConnection}
                 onAccept={acceptIncomingConnection}
                 onReject={rejectIncomingConnection}
+            />
+
+            {/* Connection Waiting Modal */}
+            <ConnectionWaitingModal
+                isConnecting={connectionStatus === 'connecting'}
+                peerId={remoteIdInput}
+                onCancel={() => {
+                    useAppStore.getState().setConnectionStatus('disconnected');
+                }}
             />
         </main>
     );

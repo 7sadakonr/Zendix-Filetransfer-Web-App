@@ -17,22 +17,32 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+html, body, #root {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+html::-webkit-scrollbar, body::-webkit-scrollbar, #root::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
-  touch-action: manipulation; /* Prevent double-tap zoom on mobile */
+  touch-action: manipulation;
+  /* Prevent double-tap zoom on mobile */
   overscroll-behavior-y: none;
+  overflow-x: hidden;
 }
 
 #root {
   width: 100%;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 @media (max-width: 767px) {
+
   html.transfer-page-lock,
   body.transfer-page-lock {
     width: 100%;
@@ -51,15 +61,19 @@ body {
   0% {
     transform: translate3d(-14%, -10%, 0) scale(0.92);
   }
+
   25% {
     transform: translate3d(18%, -6%, 0) scale(1.05);
   }
+
   50% {
     transform: translate3d(12%, 16%, 0) scale(0.96);
   }
+
   75% {
     transform: translate3d(-16%, 12%, 0) scale(1.08);
   }
+
   100% {
     transform: translate3d(-14%, -10%, 0) scale(0.92);
   }
@@ -69,26 +83,32 @@ body {
   0% {
     transform: translate3d(16%, 10%, 0) scale(1.02);
   }
+
   25% {
     transform: translate3d(-10%, 14%, 0) scale(0.92);
   }
+
   50% {
     transform: translate3d(-18%, -8%, 0) scale(1.08);
   }
+
   75% {
     transform: translate3d(12%, -16%, 0) scale(0.95);
   }
+
   100% {
     transform: translate3d(16%, 10%, 0) scale(1.02);
   }
 }
 
 @keyframes shellPulse {
+
   0%,
   100% {
     transform: scale(0.94);
     opacity: 0.3;
   }
+
   50% {
     transform: scale(1.05);
     opacity: 0.65;
@@ -99,6 +119,7 @@ body {
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }
@@ -109,12 +130,15 @@ body {
     transform: translateX(-130%) skewX(-14deg);
     opacity: 0;
   }
+
   20% {
     opacity: 0.85;
   }
+
   60% {
     opacity: 0.55;
   }
+
   100% {
     transform: translateX(135%) skewX(-14deg);
     opacity: 0;
@@ -125,12 +149,15 @@ body {
   0% {
     transform: translate3d(-18%, -8%, 0) scale(0.94);
   }
+
   33% {
     transform: translate3d(16%, 10%, 0) scale(1.04);
   }
+
   66% {
     transform: translate3d(6%, -14%, 0) scale(0.98);
   }
+
   100% {
     transform: translate3d(-18%, -8%, 0) scale(0.94);
   }
@@ -141,10 +168,12 @@ body {
     transform: rotate(0deg) translateY(-2px);
     opacity: 0.45;
   }
+
   50% {
     transform: rotate(180deg) translateY(3px);
     opacity: 0.75;
   }
+
   100% {
     transform: rotate(360deg) translateY(-2px);
     opacity: 0.45;
@@ -156,6 +185,7 @@ body {
     opacity: 0;
     transform: translateY(18px) scale(0.98);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -233,12 +263,10 @@ body {
 }
 
 .loading-shimmer {
-  background-image: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.04) 0%,
-    rgba(103, 232, 249, 0.5) 50%,
-    rgba(255, 255, 255, 0.04) 100%
-  );
+  background-image: linear-gradient(90deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(103, 232, 249, 0.5) 50%,
+      rgba(255, 255, 255, 0.04) 100%);
   background-size: 200% 100%;
   animation: shimmerTrack 1.8s linear infinite;
 }
@@ -247,11 +275,9 @@ body {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  background-image: linear-gradient(
-    135deg,
-    rgba(78, 78, 78, 0.82) 0%,
-    rgba(64, 64, 64, 0.76) 100%
-  );
+  background-image: linear-gradient(135deg,
+      rgba(78, 78, 78, 0.82) 0%,
+      rgba(64, 64, 64, 0.76) 100%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
     inset 0 -1px 0 rgba(0, 0, 0, 0.12);
@@ -263,15 +289,13 @@ body {
   inset: -20%;
   border-radius: inherit;
   transform: translateX(-130%) skewX(-16deg);
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(170, 170, 170, 0.04) 20%,
-    rgba(210, 210, 210, 0.16) 46%,
-    rgba(130, 130, 130, 0.14) 56%,
-    rgba(170, 170, 170, 0.05) 72%,
-    rgba(255, 255, 255, 0) 100%
-  );
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(170, 170, 170, 0.04) 20%,
+      rgba(210, 210, 210, 0.16) 46%,
+      rgba(130, 130, 130, 0.14) 56%,
+      rgba(170, 170, 170, 0.05) 72%,
+      rgba(255, 255, 255, 0) 100%);
   filter: blur(12px);
   animation: liquidGlassSweep 1.9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
   pointer-events: none;
@@ -314,4 +338,12 @@ body {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

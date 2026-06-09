@@ -1,0 +1,28 @@
+{
+  "id": "a71651d8",
+  "phase": "completed",
+  "pageUrl": "/",
+  "sourceFile": "src\\pages\\ConnectPage.jsx",
+  "expectedVariants": 3,
+  "arrivedVariants": 3,
+  "visibleVariant": 1,
+  "paramValues": {
+    "intensity": 0.05
+  },
+  "pendingEventSeq": null,
+  "pendingEvent": null,
+  "deliveryLease": null,
+  "checkpointRevision": 3,
+  "activeOwner": "613ae4c9",
+  "sourceMarkers": {},
+  "fallbackMode": null,
+  "annotationArtifacts": [],
+  "diagnostics": [
+    {
+      "error": "carbonize_cleanup_required",
+      "file": "src\\pages\\ConnectPage.jsx",
+      "message": "Accepted variant still has carbonize markers that must be folded into source CSS."
+    }
+  ],
+  "updatedAt": "2026-05-30T08:29:26.711Z"
+}

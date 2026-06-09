@@ -71,6 +71,9 @@ export default defineConfig({
   server: {
     host: true, // Opens network access (e.g. 192.168.x.x)
     https: true, // Enables HTTPS
-    port: 5173
+    port: 5173,
+    watch: {
+      ignored: ['**/.antigravitycli/**']
+    }
   }
 })

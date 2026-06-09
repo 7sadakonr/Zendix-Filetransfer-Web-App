@@ -64,11 +64,13 @@ const ConnectionConsentModal = ({ pending, onAccept, onReject }) => {
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-white truncate">
-                                {pending.deviceName || 'Unknown Device'}
+                                {pending.deviceName || pending.peerId}
                             </p>
-                            <p className="text-xs text-zinc-500 font-mono truncate">
-                                {pending.peerId}
-                            </p>
+                            {pending.peerId !== pending.deviceName && (
+                                <p className="text-xs text-zinc-500 font-mono truncate">
+                                    {pending.peerId}
+                                </p>
+                            )}
                         </div>
                     </div>
                 </div>

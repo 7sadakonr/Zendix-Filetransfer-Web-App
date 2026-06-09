@@ -1,5 +1,27 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1,
+            delayChildren: 0.1
+        }
+    }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 20, filter: 'blur(4px)' },
+    visible: {
+        opacity: 1,
+        y: 0,
+        filter: 'blur(0px)',
+        transition: { duration: 0.5, ease: [0.25, 1, 0.5, 1] }
+    }
+};
 import { usePeerConnection } from '../hooks/usePeerConnection';
 import useAppStore from '../stores/useAppStore';
 import { useClipboardSync } from '../hooks/useClipboardSync';
@@ -15,7 +37,7 @@ import clsx from 'clsx';
 const TransferPage = () => {
     const navigate = useNavigate();
     const { sendData, disconnectPeer, connectToPeer, connectionType, peerDeviceNames, retryCount, acceptIncomingConnection, rejectIncomingConnection, pendingIncomingConnection } = usePeerConnection();
-    const { connectionStatus, remotePeerIds, clipboardHistory, myPeerId, previewImage, setPreviewImage } = useAppStore();
+    const { connectionStatus, remotePeerIds, clipboardHistory, myPeerId, previewImage, setPreviewImage, deviceName } = useAppStore();
     const { pendingClipboardItem, confirmPendingCopy, clearPending, copySuccess } = useClipboardSync();
     const { sendFile, sendFiles, fileTransfers } = useFileTransfer();
 
@@ -65,10 +87,13 @@ const TransferPage = () => {
             if (remotePeerIds && remotePeerIds.length > 0) {
                 console.log('[TransferPage] Attempting auto-reconnect to:', remotePeerIds);
                 const timer = setTimeout(() => {
-                    useAppStore.getState().setConnectionStatus('connecting'); 
+                    // Check if we are still disconnected before attempting to reconnect
+                    if (useAppStore.getState().connectionStatus !== 'disconnected') return;
+                    
+                    useAppStore.getState().setConnectionStatus('connecting');
                     // Auto-reconnect to the primary (first) peer for simplicity on reload
                     remotePeerIds.forEach(peerId => connectToPeer(peerId));
-                }, 1500);
+                }, 5000);
                 return () => clearTimeout(timer);
             } else {
                 navigate('/');
@@ -233,7 +258,7 @@ const TransferPage = () => {
         : '';
 
     return (
-        <main aria-label="Zendix - Transfer files and clipboard" className="fixed inset-0 flex flex-col md:flex-row md:items-center md:justify-center px-4 sm:px-6 lg:px-8 pt-[calc(1rem+env(safe-area-inset-top))] sm:pt-[calc(1.5rem+env(safe-area-inset-top))] lg:pt-[calc(2rem+env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:pb-[max(2rem,env(safe-area-inset-bottom))] font-['Inter'] overflow-hidden">
+        <main aria-label="Zendix - Transfer files and clipboard" className="relative min-h-[100dvh] w-full flex flex-col px-4 sm:px-6 lg:px-8 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pt-[calc(2rem+env(safe-area-inset-top))] sm:pb-[calc(2rem+env(safe-area-inset-bottom))] lg:pt-[calc(2.5rem+env(safe-area-inset-top))] lg:pb-[calc(2.5rem+env(safe-area-inset-bottom))] font-['Inter'] overflow-x-hidden">
             {/* Safe Area Top Mask to guarantee solid status bar color */}
             <div className="fixed top-0 left-0 w-full h-[env(safe-area-inset-top)] bg-[#1a1a1a] z-50 pointer-events-none"></div>
             {/* SEO: Hidden h1 for search engines */}
@@ -246,10 +271,16 @@ const TransferPage = () => {
                     style={{ background: 'radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%)' }} />
             </div>
 
-            <div className="relative z-10 flex flex-col md:flex-row gap-3 sm:gap-4 lg:gap-6 w-full max-w-[560px] lg:max-w-[900px] h-full md:h-[600px] lg:h-[650px] justify-center items-stretch mx-auto">
+            <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="relative z-10 flex flex-col md:flex-row gap-3 sm:gap-4 lg:gap-6 w-full max-w-[560px] lg:max-w-[900px] flex-1 md:flex-none md:h-[600px] lg:h-[650px] md:max-h-[calc(100vh-6rem)] lg:max-h-[calc(100vh-8rem)] justify-center items-stretch mx-auto md:m-auto"
+            >
 
                 {/* Left Panel - Input */}
-                <div
+                <motion.div
+                    variants={itemVariants}
                     onDragEnter={(e) => {
                         // Check if it's a file being dragged
                         const types = e.dataTransfer.types;
@@ -434,10 +465,10 @@ const TransferPage = () => {
                     )}
 
 
-                </div>
+                </motion.div>
 
                 {/* Right Panel - Recent Activity */}
-                <div className="relative group rounded-[20px] sm:rounded-[24px] lg:rounded-[32px] p-4 sm:p-5 lg:p-6 w-full md:w-[320px] lg:w-[440px] flex flex-col flex-1 md:flex-none min-h-0 backdrop-blur-2xl border border-white/[0.15] overflow-hidden"
+                <motion.div variants={itemVariants} className="relative group rounded-[20px] sm:rounded-[24px] lg:rounded-[32px] p-4 sm:p-5 lg:p-6 w-full md:w-[320px] lg:w-[440px] flex flex-col flex-1 md:flex-none min-h-0 backdrop-blur-2xl border border-white/[0.15] overflow-hidden"
                     style={{
                         background: 'rgba(42, 42, 42, 0.7)',
                         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
@@ -447,10 +478,10 @@ const TransferPage = () => {
                     <div className="flex items-center justify-between shrink-0 mb-4">
                         <div>
                             <h2 className="text-neutral-200 text-xl sm:text-2xl font-semibold" id="activity-heading">
-                                {connectionStatus === 'connecting' 
-                                    ? retryCount > 0 
-                                        ? `Retrying... (${retryCount})` 
-                                        : 'Reconnecting...' 
+                                {connectionStatus === 'connecting'
+                                    ? retryCount > 0
+                                        ? `Retrying... (${retryCount})`
+                                        : 'Reconnecting...'
                                     : 'Recent Activity'}
                             </h2>
                         </div>
@@ -610,8 +641,8 @@ const TransferPage = () => {
                             ))
                         )}
                     </div>
-                </div>
-            </div>
+                </motion.div>
+            </motion.div>
 
             {/* Toasts */}
             <ClipboardToast
@@ -651,27 +682,32 @@ const TransferPage = () => {
                         </div>
 
                         <div className="mt-5 flex justify-center">
-                            <div className="inline-flex rounded-[24px] border border-white/10 bg-white p-2">
-                            {connectQrUrl ? (
-                                <QRCodeSVG
-                                    value={connectQrUrl}
-                                    size={240}
-                                    bgColor="#ffffff"
-                                    fgColor="#111111"
-                                    level="L"
-                                    includeMargin={false}
-                                    className="block h-[min(78vw,240px)] w-[min(78vw,240px)] rounded-[16px]"
-                                />
-                            ) : (
-                                <div className="h-[min(78vw,240px)] w-[min(78vw,240px)] animate-pulse rounded-[16px] bg-zinc-200" />
-                            )}
+                            <div className="inline-flex rounded-[24px] border border-white/10 bg-white p-2 w-[min(78vw,256px)] h-[min(78vw,256px)] box-border">
+                                {connectQrUrl ? (
+                                    <QRCodeSVG
+                                        value={connectQrUrl}
+                                        style={{ width: "100%", height: "100%" }}
+                                        bgColor="#ffffff"
+                                        fgColor="#111111"
+                                        level="L"
+                                        includeMargin={false}
+                                        className="block rounded-[16px]"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full rounded-[16px] loading-card-shimmer" />
+                                )}
                             </div>
                         </div>
 
                         <div className="mt-5 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4">
                             <div className="min-w-0 flex-1">
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Device ID</p>
-                                <p className="mt-2 truncate text-sm font-medium text-white">{myPeerId || 'Generating...'}</p>
+                                <div className="mt-2 text-sm font-medium text-white">
+                                    {deviceName || myPeerId ? (
+                                        <span className="truncate">{deviceName || myPeerId}</span>
+                                    ) : (
+                                        <div className="h-5 w-24 rounded loading-card-shimmer" />
+                                    )}
+                                </div>
                             </div>
                             <button
                                 type="button"
