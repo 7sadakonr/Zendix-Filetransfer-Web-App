@@ -4,13 +4,29 @@ import { playTransferCompleteSound, getTransferCompletionDelay, markTransferStar
 
 // In-memory buffer: Map<transferId, { chunks: [], receivedBytes: 0, metadata: {}, startTime: number, lastUpdate: number }>
 const transfers = new Map();
+const STALE_TRANSFER_TIMEOUT = 3 * 60 * 1000; // 3 minutes
+
+const cleanupStaleTransfers = () => {
+    const now = Date.now();
+    for (const [transferId, transfer] of transfers.entries()) {
+        if (now - transfer.lastUpdate > STALE_TRANSFER_TIMEOUT) {
+            console.warn(`[FileReceiver] Cleaning up stale transfer: ${transferId}`);
+            transfers.delete(transferId);
+            const store = useAppStore.getState();
+            const currentItem = store.fileTransfers.find((t) => t.id === transferId);
+            if (currentItem && currentItem.status === 'transferring') {
+                store.updateFileTransfer(transferId, { status: 'error' });
+            }
+        }
+    }
+};
 
 /**
  * Animate progress from current value to 100% over a duration.
  */
 const animateProgress = (transferId, duration, currentProgress) => {
     return new Promise((resolve) => {
-        const startProgress = currentProgress || 90;
+        const startProgress = currentProgress ?? 90;
         const startTime = Date.now();
         const remaining = 100 - startProgress;
 
@@ -72,6 +88,7 @@ export const handleFileProtocol = (payload) => {
     const store = useAppStore.getState();
 
     if (type === 'METADATA') {
+        cleanupStaleTransfers();
         const { fileName, displayName, fileSize, relativePath } = payload;
         const resolvedDisplayName = displayName || relativePath || fileName;
         const now = Date.now();

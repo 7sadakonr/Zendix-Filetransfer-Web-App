@@ -42,6 +42,7 @@ const TransferPage = () => {
     const { sendFile, sendFiles, fileTransfers } = useFileTransfer();
 
     const [activeTab, setActiveTab] = useState('clipboard');
+    const [mobileTab, setMobileTab] = useState('transfer');
     const [textInput, setTextInput] = useState('');
     const [copiedId, setCopiedId] = useState(null);
     const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -62,19 +63,6 @@ const TransferPage = () => {
         folderInput.setAttribute('webkitdirectory', '');
         folderInput.setAttribute('directory', '');
         folderInput.setAttribute('mozdirectory', '');
-    }, []);
-
-    useEffect(() => {
-        const isMobileViewport = window.matchMedia('(max-width: 767px)').matches;
-        if (!isMobileViewport) return;
-
-        document.documentElement.classList.add('transfer-page-lock');
-        document.body.classList.add('transfer-page-lock');
-
-        return () => {
-            document.documentElement.classList.remove('transfer-page-lock');
-            document.body.classList.remove('transfer-page-lock');
-        };
     }, []);
 
     const toggleExpand = (id) => {
@@ -176,7 +164,7 @@ const TransferPage = () => {
                     }
                 }
             } else if (!navigator.clipboard) {
-                alert("เธญเธธเธเธเธฃเธ“เนเธเธญเธเธเธธเธ“เธ–เธนเธเธเธณเธเธฑเธ”เธชเธดเธ—เธเธดเนเธเธฒเธฃเธงเธฒเธเนเธเธฅเนเธเธฒเธเธเธธเนเธก (เธ•เนเธญเธเนเธเนเธเธฒเธเธเนเธฒเธ HTTPS เธฅเธดเธเธเน) เธเธฃเธธเธ“เธฒเธฅเธญเธเนเธเนเธงเธดเธเธตเธเธ”เธเนเธฒเธเธ—เธตเนเธเนเธญเธเธเธดเธกเธเนเนเธฅเนเธงเน€เธฅเธทเธญเธ Paste เธซเธฃเธทเธญเนเธเธ—เธตเนเนเธ—เนเธ File เนเธ—เธเธเธฃเธฑเธ");
+                alert("อุปกรณ์ของคุณถูกจำกัดสิทธิ์การวางไฟล์จากปุ่ม (ต้องใช้งานผ่าน HTTPS ลิงก์) กรุณาลองใช้วิธีกดค้างที่ช่องพิมพ์แล้วเลือก Paste หรือไปที่แท็บ File แทนครับ");
             }
         } catch (err) {
             console.error('Failed to paste:', err);
@@ -235,6 +223,7 @@ const TransferPage = () => {
     const handleDragLeave = (e) => {
         e.preventDefault();
         e.stopPropagation();
+        if (e.currentTarget.contains(e.relatedTarget)) return;
         setIsDraggingOver(false);
     };
 
@@ -258,13 +247,13 @@ const TransferPage = () => {
         : '';
 
     return (
-        <main aria-label="Zendix - Transfer files and clipboard" className="relative min-h-[100dvh] w-full flex flex-col px-4 sm:px-6 lg:px-8 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pt-[calc(2rem+env(safe-area-inset-top))] sm:pb-[calc(2rem+env(safe-area-inset-bottom))] lg:pt-[calc(2.5rem+env(safe-area-inset-top))] lg:pb-[calc(2.5rem+env(safe-area-inset-bottom))] font-['Inter'] overflow-x-hidden">
+        <main aria-label="Zendix - Transfer files and clipboard" className="relative h-full w-full flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pt-[calc(2rem+env(safe-area-inset-top))] sm:pb-[calc(2rem+env(safe-area-inset-bottom))] font-['Inter'] overflow-hidden">
             {/* Safe Area Top Mask to guarantee solid status bar color */}
             <div className="fixed top-0 left-0 w-full h-[env(safe-area-inset-top)] bg-[#1a1a1a] z-50 pointer-events-none"></div>
             {/* SEO: Hidden h1 for search engines */}
             <h1 className="sr-only">Zendix - Peer-to-Peer File Transfer and Clipboard Sync</h1>
             {/* Ambient glow background */}
-            <div className="fixed top-0 left-0 w-full h-[100vh] overflow-hidden pointer-events-none -z-10">
+            <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10">
                 <div className="absolute top-[-10%] left-[-10%] w-[60vw] min-w-[300px] aspect-square rounded-full opacity-20 blur-[80px] sm:blur-[100px]"
                     style={{ background: 'radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%)' }} />
                 <div className="absolute top-[60%] right-[-10%] w-[60vw] min-w-[300px] aspect-square rounded-full opacity-20 blur-[80px] sm:blur-[100px]"
@@ -275,209 +264,262 @@ const TransferPage = () => {
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
-                className="relative z-10 flex flex-col md:flex-row gap-3 sm:gap-4 lg:gap-6 w-full max-w-[560px] lg:max-w-[900px] flex-1 md:flex-none md:h-[600px] lg:h-[650px] md:max-h-[calc(100vh-6rem)] lg:max-h-[calc(100vh-8rem)] justify-center items-stretch mx-auto md:m-auto"
+                className="relative z-10 flex flex-col items-center justify-center w-full max-h-full my-auto"
             >
+                {/* Mobile Segmented Tab Switcher */}
+                <div className="flex md:hidden w-full max-w-[350px] bg-[#2a2a2a]/90 backdrop-blur-xl p-1 rounded-2xl border border-white/[0.12] mb-3 shrink-0 shadow-lg items-center">
+                    <button
+                        type="button"
+                        onClick={() => setMobileTab('transfer')}
+                        className={clsx(
+                            "flex-1 py-2 px-3 rounded-xl text-xs font-semibold transition-all duration-300 flex items-center justify-center gap-1.5",
+                            mobileTab === 'transfer'
+                                ? "bg-white text-zinc-900 shadow-md scale-[1.01]"
+                                : "text-zinc-400 hover:text-zinc-200"
+                        )}
+                    >
+                        <Send size={13} />
+                        <span>Send Data</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setMobileTab('activity')}
+                        className={clsx(
+                            "flex-1 py-2 px-3 rounded-xl text-xs font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 relative",
+                            mobileTab === 'activity'
+                                ? "bg-white text-zinc-900 shadow-md scale-[1.01]"
+                                : "text-zinc-400 hover:text-zinc-200"
+                        )}
+                    >
+                        <FileText size={13} />
+                        <span>Activity</span>
+                        {allActivity.length > 0 && (
+                            <span className={clsx(
+                                "px-1.5 py-0.2 rounded-full text-[10px] font-bold leading-none",
+                                mobileTab === 'activity' ? "bg-zinc-900 text-white" : "bg-cyan-500 text-black"
+                            )}>
+                                {allActivity.length}
+                            </span>
+                        )}
+                    </button>
+                </div>
 
-                {/* Left Panel - Input */}
-                <motion.div
-                    variants={itemVariants}
-                    onDragEnter={(e) => {
-                        // Check if it's a file being dragged
-                        const types = e.dataTransfer.types;
-                        if (types && (Array.from(types).includes('Files') || types.includes?.('application/x-moz-file'))) {
-                            if (activeTab !== 'file') {
-                                setActiveTab('file');
+                <div className="flex flex-col md:flex-row gap-4 sm:gap-6 lg:gap-8 w-full max-w-[350px] md:max-w-[760px] lg:max-w-[890px] justify-center items-stretch">
+                    {/* Left Panel - Input */}
+                    <motion.div
+                        variants={itemVariants}
+                        onDragEnter={(e) => {
+                            // Check if it's a file being dragged
+                            const types = e.dataTransfer.types;
+                            if (types && (Array.from(types).includes('Files') || types.includes?.('application/x-moz-file'))) {
+                                if (activeTab !== 'file') {
+                                    setActiveTab('file');
+                                }
                             }
-                        }
-                    }}
-                    onDragOver={(e) => {
-                        // Prevent default to allow dropping in the entire left panel if needed,
-                        // but mainly we want the dropzone to handle the actual drop.
-                        e.preventDefault();
-                    }}
-                    className="relative group rounded-[20px] sm:rounded-[24px] lg:rounded-[32px] p-4 sm:p-5 lg:p-6 w-full md:w-[320px] lg:w-[400px] flex flex-col flex-1 md:flex-none min-h-0 backdrop-blur-2xl border border-white/[0.15] overflow-hidden"
-                    style={{
-                        background: 'rgba(42, 42, 42, 0.7)',
-                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-                    }}>
-
-                    {/* Header with Pill Tabs and Logout */}
-                    <div className="relative flex items-center gap-2 shrink-0">
-                        <button
-                            onClick={handleLogout}
-                            aria-label="Disconnect and return to home"
-                            className="p-2.5 rounded-full bg-[#2a2a2a] border border-white/[0.08] text-zinc-500 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 transition-all"
-                            title="Disconnect"
-                        >
-                            <LogOut size={16} />
-                        </button>
-                        <div className="flex-1 flex bg-[#2a2a2a] rounded-full p-1 border border-white/[0.08]">
+                        }}
+                        onDragOver={(e) => {
+                            // Prevent default to allow dropping in the entire left panel if needed,
+                            // but mainly we want the dropzone to handle the actual drop.
+                            e.preventDefault();
+                        }}
+                        className={clsx(
+                            "relative group rounded-[24px] sm:rounded-[28px] lg:rounded-[32px] p-5 sm:p-6 lg:p-7 w-full md:w-[350px] lg:w-[410px] h-[450px] sm:h-[500px] md:h-[580px] lg:h-[620px] flex-col backdrop-blur-2xl border border-white/[0.15] overflow-hidden shadow-2xl shrink-0",
+                            mobileTab === 'transfer' ? "flex" : "hidden md:flex"
+                        )}
+                        style={{
+                            background: 'rgba(42, 42, 42, 0.7)',
+                            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                        }}
+                    >
+                        {/* Header with Pill Tabs and Logout */}
+                        <div className="relative flex items-center gap-2 shrink-0">
                             <button
-                                onClick={() => setActiveTab('clipboard')}
-                                className={clsx(
-                                    "flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-full text-sm font-medium transition-all duration-300",
-                                    activeTab === 'clipboard'
-                                        ? "bg-[#3a3a3a] text-white shadow-lg"
-                                        : "text-zinc-500 hover:text-zinc-300"
-                                )}
+                                onClick={handleLogout}
+                                aria-label="Disconnect and return to home"
+                                className="p-2 sm:p-2.5 rounded-full bg-[#2a2a2a] border border-white/[0.08] text-zinc-500 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 transition-all"
+                                title="Disconnect"
                             >
-                                <Clipboard size={16} />
-                                <span>Clipboard</span>
+                                <LogOut size={15} />
                             </button>
-                            <button
-                                onClick={() => setActiveTab('file')}
-                                className={clsx(
-                                    "flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-full text-sm font-medium transition-all duration-300",
-                                    activeTab === 'file'
-                                        ? "bg-[#3a3a3a] text-white shadow-lg"
-                                        : "text-zinc-500 hover:text-zinc-300"
-                                )}
-                            >
-                                <FileText size={16} />
-                                <span>File</span>
-                            </button>
+                            <div className="flex-1 flex bg-[#2a2a2a] rounded-full p-1 border border-white/[0.08]">
+                                <button
+                                    onClick={() => setActiveTab('clipboard')}
+                                    className={clsx(
+                                        "flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 px-3 sm:px-4 rounded-full text-xs sm:text-sm font-medium transition-all duration-300",
+                                        activeTab === 'clipboard'
+                                            ? "bg-[#3a3a3a] text-white shadow-lg"
+                                            : "text-zinc-500 hover:text-zinc-300"
+                                    )}
+                                >
+                                    <Clipboard size={14} className="sm:w-4 sm:h-4" />
+                                    <span>Clipboard</span>
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('file')}
+                                    className={clsx(
+                                        "flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 px-3 sm:px-4 rounded-full text-xs sm:text-sm font-medium transition-all duration-300",
+                                        activeTab === 'file'
+                                            ? "bg-[#3a3a3a] text-white shadow-lg"
+                                            : "text-zinc-500 hover:text-zinc-300"
+                                    )}
+                                >
+                                    <FileText size={14} className="sm:w-4 sm:h-4" />
+                                    <span>File</span>
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Content Area */}
-                    <div className="flex-1 flex flex-col mt-4 min-h-0">
-                        {activeTab === 'clipboard' ? (
-                            <div className="flex-1 flex flex-col min-h-0">
-                                <div
-                                    ref={textareaRef}
-                                    contentEditable="true"
-                                    suppressContentEditableWarning={true}
-                                    onInput={(e) => setTextInput(e.currentTarget.innerText)}
-                                    className="flex-1 w-full bg-transparent text-neutral-200 text-base sm:text-lg outline-none min-h-[120px] sm:min-h-[200px] overflow-y-auto cursor-text empty:before:content-[attr(data-placeholder)] empty:before:text-zinc-600 block whitespace-pre-wrap break-words custom-scrollbar"
-                                    data-placeholder="Type or paste content..."
-                                    onPaste={(e) => {
-                                        const items = e.clipboardData?.items;
-                                        const files = e.clipboardData?.files;
-                                        let hasFile = false;
+                        {/* Content Area */}
+                        <div className="flex-1 flex flex-col mt-3 sm:mt-4 min-h-0">
+                            {activeTab === 'clipboard' ? (
+                                <div className="flex-1 flex flex-col min-h-0">
+                                    <div
+                                        ref={textareaRef}
+                                        contentEditable="true"
+                                        suppressContentEditableWarning={true}
+                                        onInput={(e) => {
+                                            const text = e.currentTarget.innerText || '';
+                                            if (!text.trim()) {
+                                                e.currentTarget.innerHTML = '';
+                                                setTextInput('');
+                                            } else {
+                                                setTextInput(text);
+                                            }
+                                        }}
+                                        className="flex-1 w-full bg-transparent text-neutral-200 text-sm sm:text-base lg:text-lg outline-none min-h-[140px] overflow-y-auto cursor-text empty:before:content-[attr(data-placeholder)] empty:before:text-zinc-600 block whitespace-pre-wrap break-words custom-scrollbar"
+                                        data-placeholder="Type or paste content..."
+                                        onPaste={(e) => {
+                                            const items = e.clipboardData?.items;
+                                            const files = e.clipboardData?.files;
+                                            let hasFile = false;
 
-                                        if (files && files.length > 0) {
-                                            sendFiles(getFilesFromFileList(files));
-                                            hasFile = true;
-                                        } else if (items) {
-                                            for (let i = 0; i < items.length; i++) {
-                                                const item = items[i];
-                                                if (item.kind === 'file') {
-                                                    const file = item.getAsFile();
-                                                    if (file) {
-                                                        sendFile(file);
-                                                        hasFile = true;
+                                            if (files && files.length > 0) {
+                                                sendFiles(getFilesFromFileList(files));
+                                                hasFile = true;
+                                            } else if (items) {
+                                                for (let i = 0; i < items.length; i++) {
+                                                    const item = items[i];
+                                                    if (item.kind === 'file') {
+                                                        const file = item.getAsFile();
+                                                        if (file) {
+                                                            sendFile(file);
+                                                            hasFile = true;
+                                                        }
                                                     }
                                                 }
                                             }
-                                        }
 
-                                        if (hasFile) {
-                                            e.preventDefault();
-                                            setActiveTab('file');
-                                        } else {
-                                            // Handle plain text paste manually to prevent rich HTML injection inside contentEditable
-                                            e.preventDefault();
-                                            const text = e.clipboardData.getData('text/plain');
-                                            document.execCommand('insertText', false, text);
-                                        }
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && e.ctrlKey) {
-                                            e.preventDefault();
-                                            handleSendText();
-                                        }
-                                    }}
-                                />
-                            </div>
-                        ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center min-h-0">
-                                <div
-                                    onDragOver={handleDragOver}
-                                    onDragLeave={handleDragLeave}
-                                    onDrop={handleDrop}
-                                    onClick={(e) => {
-                                        if (e.target === e.currentTarget && connectionStatus === 'connected') {
-                                            fileInputRef.current?.click();
-                                        }
-                                    }}
-                                    className={clsx(
-                                        "relative flex flex-col items-center justify-center w-full h-full min-h-[150px] rounded-2xl border-2 transition-all cursor-pointer group/drop px-6",
-                                        connectionStatus === 'connected'
-                                            ? isDraggingOver
-                                                ? "border-cyan-400 bg-cyan-500/20 border-solid shadow-[0_0_15px_rgba(34,211,238,0.3)]"
-                                                : "border-cyan-500/30 border-dashed hover:border-cyan-500/50 hover:bg-cyan-500/5"
-                                            : "border-white/10 border-dashed opacity-50 cursor-not-allowed"
-                                    )}>
-                                    <Upload size={40} className={clsx("mb-3 transition-colors", isDraggingOver ? "text-cyan-400 scale-110" : "text-zinc-500 group-hover/drop:text-cyan-400")} />
-                                    <p className={clsx("text-sm font-medium mb-1 text-center", isDraggingOver ? "text-cyan-300" : "text-zinc-400")}>
-                                        {connectionStatus === 'connected' ? (isDraggingOver ? "Drop files or folders now!" : "Click, drag files, or drop a folder here") : "Reconnecting to send files..."}
-                                    </p>
-                                    <p className="text-zinc-600 text-xs text-center">Files are sent one by one automatically. Folder contents keep their relative path labels.</p>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        className="hidden"
-                                        onChange={handleFileSelect}
-                                        disabled={connectionStatus !== 'connected'}
-                                        multiple
+                                            if (hasFile) {
+                                                e.preventDefault();
+                                                setActiveTab('file');
+                                            } else {
+                                                // Handle plain text paste manually to prevent rich HTML injection inside contentEditable
+                                                e.preventDefault();
+                                                const text = e.clipboardData.getData('text/plain');
+                                                document.execCommand('insertText', false, text);
+                                            }
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && e.ctrlKey) {
+                                                e.preventDefault();
+                                                handleSendText();
+                                            }
+                                        }}
                                     />
-                                    <input
-                                        ref={folderInputRef}
-                                        type="file"
-                                        className="hidden"
-                                        onChange={handleFolderSelect}
-                                        disabled={connectionStatus !== 'connected'}
-                                        webkitdirectory=""
-                                        directory=""
-                                        multiple
-                                    />
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex flex-col items-center justify-center min-h-0">
+                                    <div
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={handleDrop}
+                                        onClick={(e) => {
+                                            if (e.target === e.currentTarget && connectionStatus === 'connected') {
+                                                fileInputRef.current?.click();
+                                            }
+                                        }}
+                                        className={clsx(
+                                            "relative flex flex-col items-center justify-center w-full h-full min-h-[140px] rounded-2xl border-2 transition-all cursor-pointer group/drop px-4 py-3",
+                                            connectionStatus === 'connected'
+                                                ? isDraggingOver
+                                                    ? "border-cyan-400 bg-cyan-500/20 border-solid shadow-[0_0_15px_rgba(34,211,238,0.3)]"
+                                                    : "border-cyan-500/30 border-dashed hover:border-cyan-500/50 hover:bg-cyan-500/5"
+                                                : "border-white/10 border-dashed opacity-50 cursor-not-allowed"
+                                        )}>
+                                        <Upload size={32} className={clsx("sm:w-10 sm:h-10 mb-2 transition-colors pointer-events-none", isDraggingOver ? "text-cyan-400 scale-110" : "text-zinc-500 group-hover/drop:text-cyan-400")} />
+                                        <p className={clsx("text-xs sm:text-sm font-medium mb-1 text-center pointer-events-none", isDraggingOver ? "text-cyan-300" : "text-zinc-300")}>
+                                            {connectionStatus === 'connected' ? (isDraggingOver ? "Drop files or folders now!" : "Click, drag files, or drop a folder") : "Reconnecting to send files..."}
+                                        </p>
+                                        <p className="text-zinc-500 text-[10px] sm:text-xs text-center pointer-events-none line-clamp-2">Files sent directly peer-to-peer. Folders supported.</p>
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            className="hidden"
+                                            onChange={handleFileSelect}
+                                            disabled={connectionStatus !== 'connected'}
+                                            multiple
+                                        />
+                                        <input
+                                            ref={folderInputRef}
+                                            type="file"
+                                            className="hidden"
+                                            onChange={handleFolderSelect}
+                                            disabled={connectionStatus !== 'connected'}
+                                            webkitdirectory=""
+                                            directory=""
+                                            multiple
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer - Only show on Clipboard tab */}
+                        {activeTab === 'clipboard' && (
+                            <div className="relative flex items-center justify-between mt-3 sm:mt-4 pt-3 sm:pt-4 shrink-0 border-t border-white/[0.08]">
+                                <p className="text-zinc-500 text-[10px] sm:text-xs max-w-[150px] sm:max-w-[200px] leading-tight">
+                                    Secure end-to-end encrypted P2P.
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={handlePaste}
+                                        className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium text-zinc-400 border border-zinc-600 hover:border-zinc-500 hover:text-zinc-300 transition-all flex items-center gap-1.5"
+                                    >
+                                        <Clipboard size={13} />
+                                        Paste
+                                    </button>
+                                    <button
+                                        onClick={handleSendText}
+                                        disabled={!textInput.trim()}
+                                        className="p-2 sm:p-2.5 rounded-full bg-cyan-500 text-black hover:bg-cyan-400 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                        style={{
+                                            boxShadow: textInput.trim() ? '0 0 20px rgba(0, 200, 255, 0.4)' : 'none'
+                                        }}
+                                    >
+                                        <Send size={15} />
+                                    </button>
                                 </div>
                             </div>
                         )}
-                    </div>
+                    </motion.div>
 
-                    {/* Footer - Only show on Clipboard tab */}
-                    {activeTab === 'clipboard' && (
-                        <div className="relative flex items-center justify-between mt-4 pt-4 shrink-0 border-t border-white/[0.08]">
-                            <p className="text-zinc-600 text-[10px] sm:text-xs max-w-[180px] sm:max-w-[200px] leading-tight">
-                                Secure P2P connection established. Your data is end-to-end encrypted and never touches the cloud.
-                            </p>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={handlePaste}
-                                    className="px-4 py-2 rounded-full text-sm font-medium text-zinc-400 border border-zinc-600 hover:border-zinc-500 hover:text-zinc-300 transition-all flex items-center gap-1.5"
-                                >
-                                    <Clipboard size={14} />
-                                    Paste
-                                </button>
-                                <button
-                                    onClick={handleSendText}
-                                    disabled={!textInput.trim()}
-                                    className="p-3 rounded-full bg-cyan-500 text-black hover:bg-cyan-400 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                                    style={{
-                                        boxShadow: textInput.trim() ? '0 0 20px rgba(0, 200, 255, 0.4)' : 'none'
-                                    }}
-                                >
-                                    <Send size={18} />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-
-                </motion.div>
-
-                {/* Right Panel - Recent Activity */}
-                <motion.div variants={itemVariants} className="relative group rounded-[20px] sm:rounded-[24px] lg:rounded-[32px] p-4 sm:p-5 lg:p-6 w-full md:w-[320px] lg:w-[440px] flex flex-col flex-1 md:flex-none min-h-0 backdrop-blur-2xl border border-white/[0.15] overflow-hidden"
-                    style={{
-                        background: 'rgba(42, 42, 42, 0.7)',
-                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-                    }}>
+                    {/* Right Panel - Recent Activity */}
+                    <motion.div
+                        variants={itemVariants}
+                        className={clsx(
+                            "relative group rounded-[24px] sm:rounded-[28px] lg:rounded-[32px] p-5 sm:p-6 lg:p-7 w-full md:w-[380px] lg:w-[450px] h-[450px] sm:h-[500px] md:h-[580px] lg:h-[620px] flex-col backdrop-blur-2xl border border-white/[0.15] overflow-hidden shadow-2xl shrink-0",
+                            mobileTab === 'activity' ? "flex" : "hidden md:flex"
+                        )}
+                        style={{
+                            background: 'rgba(42, 42, 42, 0.7)',
+                            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                        }}
+                    >
 
                     {/* Header */}
-                    <div className="flex items-center justify-between shrink-0 mb-4">
+                    <div className="flex items-center justify-between shrink-0 mb-2 sm:mb-4">
                         <div>
-                            <h2 className="text-neutral-200 text-xl sm:text-2xl font-semibold" id="activity-heading">
+                            <h2 className="text-neutral-200 text-base sm:text-2xl font-semibold" id="activity-heading">
                                 {connectionStatus === 'connecting'
                                     ? retryCount > 0
                                         ? `Retrying... (${retryCount})`
@@ -485,7 +527,7 @@ const TransferPage = () => {
                                     : 'Recent Activity'}
                             </h2>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
                             {/* LAN/Relay Badge */}
                             {connectionStatus === 'connected' && (() => {
                                 const badge = getConnectionBadge();
@@ -493,7 +535,7 @@ const TransferPage = () => {
                                 const BadgeIcon = badge.icon;
                                 return (
                                     <span className={clsx(
-                                        "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold",
+                                        "flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold",
                                         badge.color, badge.bg
                                     )}>
                                         <BadgeIcon size={10} />
@@ -509,7 +551,7 @@ const TransferPage = () => {
                                 type="button"
                                 onClick={() => setShowConnectInfo(true)}
                                 className={clsx(
-                                    "text-sm transition-colors",
+                                    "text-xs sm:text-sm transition-colors max-w-[100px] sm:max-w-[160px] truncate",
                                     connectionStatus === 'connected'
                                         ? "text-zinc-400 hover:text-white"
                                         : "text-amber-500/80 hover:text-amber-300"
@@ -522,7 +564,7 @@ const TransferPage = () => {
                     </div>
 
                     {/* Activity List */}
-                    <div className="flex-1 overflow-y-auto space-y-3 min-h-0 pr-1 custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto space-y-2 sm:space-y-3 min-h-0 pr-1 custom-scrollbar">
                         {allActivity.length === 0 ? (
                             <div className="flex items-center justify-center h-full text-zinc-600 text-sm">
                                 No activity yet
@@ -642,7 +684,8 @@ const TransferPage = () => {
                         )}
                     </div>
                 </motion.div>
-            </motion.div>
+            </div>
+        </motion.div>
 
             {/* Toasts */}
             <ClipboardToast

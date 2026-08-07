@@ -14,9 +14,9 @@ export const safeWriteText = async (text) => {
 };
 
 export const safeReadText = async () => {
-    // iOS Safari doesn't allow programmatic reading without a very specific context, 
+    // iOS doesn't allow programmatic reading without a very specific context, 
     // and often not at all. We should rely on manual paste for iOS.
-    if (isIOS() && isSafari()) {
+    if (isIOS()) {
         throw new Error("IOS_RESTRICTION");
     }
 

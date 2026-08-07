@@ -12,6 +12,22 @@ const QRScanner = ({ onScan }) => {
     const [hasScanned, setHasScanned] = useState(false);
     
     const isScanningRef = useRef(false);
+    const jsQRRef = useRef(null);
+
+    // Preload jsQR once on component mount rather than importing on every frame
+    useEffect(() => {
+        let isCurrent = true;
+        import('jsqr').then((m) => {
+            if (isCurrent) {
+                jsQRRef.current = m.default;
+            }
+        }).catch((err) => {
+            console.error('Failed to load jsQR library:', err);
+        });
+        return () => {
+            isCurrent = false;
+        };
+    }, []);
 
     const stopCamera = useCallback(() => {
         isScanningRef.current = false;
@@ -41,6 +57,15 @@ const QRScanner = ({ onScan }) => {
             return;
         }
 
+        const jsQR = jsQRRef.current;
+        if (!jsQR) {
+            // Still loading jsqr module, retry next frame
+            if (isScanningRef.current) {
+                animationRef.current = requestAnimationFrame(scanQRCode);
+            }
+            return;
+        }
+
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -48,30 +73,20 @@ const QRScanner = ({ onScan }) => {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-        // Dynamic import
-        import('jsqr').then(jsQRModule => {
-            if (!isScanningRef.current) return;
-            
-            const jsQR = jsQRModule.default;
-            const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                inversionAttempts: "dontInvert"
-            });
-
-            if (code && code.data) {
-                setHasScanned(true);
-                isScanningRef.current = false;
-                if (onScan) onScan(code.data);
-            }
-
-            // Loop only if not scanned (or keep scanning? Logic says stop if scanned)
-            if (!code || !code.data) {
-                if (isScanningRef.current) {
-                    animationRef.current = requestAnimationFrame(scanQRCode);
-                }
-            }
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "dontInvert"
         });
 
+        if (code && code.data) {
+            setHasScanned(true);
+            isScanningRef.current = false;
+            if (onScan) onScan(code.data);
+            return;
+        }
+
+        if (isScanningRef.current) {
+            animationRef.current = requestAnimationFrame(scanQRCode);
+        }
     }, [onScan, hasScanned]);
 
     useEffect(() => {
