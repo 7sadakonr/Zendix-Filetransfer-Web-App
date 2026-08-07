@@ -28,7 +28,7 @@ export const useFileTransfer = () => {
     // Animate progress from current value to 100% over a duration
     const animateProgressToComplete = useCallback((transferId, duration, currentProgress) => {
         return new Promise((resolve) => {
-            const startProgress = currentProgress || 90;
+            const startProgress = currentProgress ?? 90;
             const startTime = Date.now();
             const remaining = 100 - startProgress;
 
@@ -52,60 +52,69 @@ export const useFileTransfer = () => {
     }, [updateFileTransfer]);
 
     const sendQueuedFile = useCallback(async ({ transferId, file, relativePath, displayName }) => {
-        console.log('[File] Selected:', displayName, 'Size:', file.size, 'Type:', file.type);
-
-        const currentConnections = useAppStore.getState().activeConnections;
-        if (!currentConnections || currentConnections.length === 0) {
-            throw new Error('No active connection');
-        }
-
-        if (!file || file.size === 0) {
-            throw new Error('Invalid file: empty or 0 bytes');
-        }
+        console.log('[File] Selected:', displayName, 'Size:', file?.size, 'Type:', file?.type);
 
         const abortController = new AbortController();
         abortControllers.current.set(transferId, abortController);
 
-        console.log(`[File] Starting transfer: ${displayName} (${file.size} bytes)`);
-        sendData('FILE', {
-            type: 'METADATA',
-            transferId,
-            fileName: file.name,
-            displayName,
-            relativePath,
-            fileSize: file.size,
-            fileType: file.type
-        });
-
-        updateFileTransfer(transferId, { status: 'transferring' });
-        playTransferStartSound(transferId);
-
         try {
+            const currentConnections = useAppStore.getState().activeConnections;
+            if (!currentConnections || currentConnections.length === 0) {
+                throw new Error('No active connection');
+            }
+
+            if (!file || file.size === 0) {
+                throw new Error('Invalid file: empty or 0 bytes');
+            }
+
+            console.log(`[File] Starting transfer: ${displayName} (${file.size} bytes)`);
+            sendData('FILE', {
+                type: 'METADATA',
+                transferId,
+                fileName: file.name,
+                displayName,
+                relativePath,
+                fileSize: file.size,
+                fileType: file.type
+            });
+
+            updateFileTransfer(transferId, { status: 'transferring' });
+            playTransferStartSound(transferId);
+
             let sentBytes = 0;
             let lastProgress = 0;
             const startTime = Date.now();
             let lastUpdate = startTime;
 
             await chunkFile(file, async (chunkData, offset) => {
-                const liveConnections = useAppStore.getState().activeConnections;
-                if (!liveConnections || liveConnections.length === 0) {
-                    throw new Error('Connection lost during transfer');
+                if (abortController.signal.aborted) {
+                    throw new Error('Transfer cancelled');
                 }
 
                 const maxBuffer = 1 * 1024 * 1024;
                 let isReady = false;
 
                 while (!isReady) {
+                    if (abortController.signal.aborted) {
+                        throw new Error('Transfer cancelled');
+                    }
+
+                    const liveConnections = useAppStore.getState().activeConnections;
+                    if (!liveConnections || liveConnections.length === 0) {
+                        throw new Error('Connection lost during transfer');
+                    }
+
                     isReady = true;
                     for (const conn of liveConnections) {
-                        if (conn.dataChannel && conn.dataChannel.bufferedAmount > maxBuffer) {
+                        const dc = conn.dataChannel;
+                        if (dc && dc.readyState === 'open' && dc.bufferedAmount > maxBuffer) {
                             isReady = false;
                             break;
                         }
                     }
 
                     if (!isReady) {
-                        await new Promise((resolve) => setTimeout(resolve, 10));
+                        await new Promise((resolve) => setTimeout(resolve, 50));
                     }
                 }
 
@@ -180,6 +189,8 @@ export const useFileTransfer = () => {
 
         try {
             await sendQueuedFile(nextTransfer);
+        } catch (queueErr) {
+            console.error('[FileQueue] Uncaught error during file transfer:', queueErr);
         } finally {
             isProcessingRef.current = false;
 

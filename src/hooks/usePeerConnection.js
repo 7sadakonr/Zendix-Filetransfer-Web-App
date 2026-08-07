@@ -19,6 +19,7 @@ const getRetryDelay = (attempt) => Math.min(10000, Math.pow(2, attempt) * 1000);
 // Track user-initiated name changes to handle unavailable-id differently
 let isUserNameChange = false;
 let previousPeerId = null;
+let previousDeviceName = null;
 
 const schedulePeerReinitialize = (delayMs = 100) => {
     setTimeout(() => {
@@ -158,17 +159,42 @@ const initializePeer = () => {
     peerInstance.on('connection', (conn) => {
         console.log('[Peer] Incoming connection from:', conn.peer);
         
+        const store = useAppStore.getState();
+
+        // Check room limit before queuing consent
+        if (store.activeConnections.length >= MAX_PEERS) {
+            console.log('[Conn] Room is full. Auto-rejecting incoming peer:', conn.peer);
+            try {
+                if (conn.open) {
+                    conn.send({ type: 'SYSTEM', payload: { action: 'REJECT_FULL' } });
+                }
+                setTimeout(() => { try { conn.close(); } catch (e) { } }, 500);
+            } catch (e) {
+                console.error('Error auto-rejecting full room:', e);
+            }
+            return;
+        }
+
+        // Auto-clear consent modal if sender disconnects or closes before accept/reject
+        conn.on('close', () => {
+            const currentPending = useAppStore.getState().pendingIncomingConnection;
+            if (currentPending && currentPending.peerId === conn.peer) {
+                console.log('[Consent] Sender disconnected while waiting for consent:', conn.peer);
+                useAppStore.getState().clearPendingIncomingConnection();
+            }
+        });
+
         // Listen for data BEFORE user accepts, to capture DEVICE_INFO
         conn.on('data', function earlyDataHandler(data) {
             if (data?.type === 'SYSTEM' && data?.payload?.action === 'DEVICE_INFO') {
                 console.log('[Consent] Received early DEVICE_INFO from:', conn.peer);
-                const store = useAppStore.getState();
-                store.setPeerDeviceName(conn.peer, data.payload.deviceName);
-                store.addTrustedDevice(conn.peer, data.payload.deviceName);
+                const currentStore = useAppStore.getState();
+                currentStore.setPeerDeviceName(conn.peer, data.payload.deviceName);
+                currentStore.addTrustedDevice(conn.peer, data.payload.deviceName);
                 
-                const pending = store.pendingIncomingConnection;
+                const pending = currentStore.pendingIncomingConnection;
                 if (pending && pending.peerId === conn.peer) {
-                    store.setPendingIncomingConnection({
+                    currentStore.setPendingIncomingConnection({
                         ...pending,
                         deviceName: data.payload.deviceName
                     });
@@ -177,7 +203,6 @@ const initializePeer = () => {
         });
 
         // Connection Consent: Queue the connection for user approval
-        const store = useAppStore.getState();
         store.setPendingIncomingConnection({
             conn,
             peerId: conn.peer,
@@ -209,9 +234,6 @@ const initializePeer = () => {
             const match = err.message?.match(/Could not connect to peer (.+)/);
             if (match && match[1]) {
                 store.removeConnection(match[1], false); // Completely remove this dead peer
-            } else if (store.activeConnections.length === 0) {
-                // Fallback: if we have no active connections, just clear everything to break the loop
-                store.clearPersistedData();
             }
 
             if (store.connectionStatus === 'connecting') {
@@ -230,9 +252,10 @@ const initializePeer = () => {
                 store.setNameChangeError('ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่น');
                 store.setPreferredPeerId(previousPeerId);
                 store.setMyPeerId(previousPeerId);
-                store.setDeviceName(null);
+                store.setDeviceName(previousDeviceName);
                 isUserNameChange = false;
                 previousPeerId = null;
+                previousDeviceName = null;
                 unavailableIdRetries = 0;
                 schedulePeerReinitialize(250);
                 // Auto-clear error after 4 seconds
@@ -388,11 +411,15 @@ const setupConnectionHandlers = (conn, timeoutRef, isIncoming = false) => {
                 useAppStore.getState().setConnectionType(connType);
             }, 2000);
 
-            // Sync mesh peers to the newly connected peer
+            // Sync mesh peers to ALL connected peers
             const newStore = useAppStore.getState();
             const allPeerIds = [newStore.myPeerId, ...newStore.activeConnections.map(c => c.peer)];
             const uniquePeerIds = [...new Set(allPeerIds)];
-            conn.send({ type: 'SYSTEM', payload: { action: 'SYNC_PEERS', peers: uniquePeerIds } });
+            newStore.activeConnections.forEach(c => {
+                if (c.open) {
+                    c.send({ type: 'SYSTEM', payload: { action: 'SYNC_PEERS', peers: uniquePeerIds } });
+                }
+            });
         }
         
         handleIncomingData(data, conn.peer);
@@ -400,11 +427,19 @@ const setupConnectionHandlers = (conn, timeoutRef, isIncoming = false) => {
 
     conn.on('close', () => {
         console.log('[Conn] Closed:', conn.peer);
+        if (timeoutRef?.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+        }
         useAppStore.getState().removeConnection(conn.peer, true);
     });
 
     conn.on('error', (err) => {
         console.error('[Conn] Error:', err);
+        if (timeoutRef?.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+        }
     });
 
     // If the connection is already open (e.g. from consent flow where open fired before handlers were set up),
@@ -596,6 +631,11 @@ export const usePeerConnection = () => {
     }, []);
 
     const manualDisconnect = useCallback(() => {
+        if (reconnectInterval) {
+            clearInterval(reconnectInterval);
+            reconnectInterval = null;
+        }
+
         const store = useAppStore.getState();
         const conns = [...store.activeConnections];
 
@@ -623,6 +663,11 @@ export const usePeerConnection = () => {
     }, []);
 
     const regeneratePeerId = useCallback(() => {
+        if (reconnectInterval) {
+            clearInterval(reconnectInterval);
+            reconnectInterval = null;
+        }
+
         const store = useAppStore.getState();
         const newId = generatePeerId();
 
@@ -658,6 +703,11 @@ export const usePeerConnection = () => {
         const trimmedName = newName.trim();
         if (!trimmedName) return null;
 
+        if (reconnectInterval) {
+            clearInterval(reconnectInterval);
+            reconnectInterval = null;
+        }
+
         const store = useAppStore.getState();
 
         // Use the exact name as the Peer ID
@@ -672,6 +722,7 @@ export const usePeerConnection = () => {
 
         // Track this as user-initiated so we can revert on unavailable-id
         previousPeerId = store.myPeerId;
+        previousDeviceName = store.deviceName;
         isUserNameChange = true;
 
         unavailableIdRetries = 0;

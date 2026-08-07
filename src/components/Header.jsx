@@ -9,7 +9,7 @@ const Header = () => {
                     <Share2 size={24} />
                 </div>
                 <div>
-                    <h1 className="text-xl font-bold text-white leading-tight">SyncStream</h1>
+                    <h1 className="text-xl font-bold text-white leading-tight">Zendix</h1>
                     <p className="text-xs text-gray-400">P2P Transfer</p>
                 </div>
             </div>

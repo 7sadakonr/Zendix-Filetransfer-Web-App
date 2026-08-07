@@ -6,28 +6,32 @@ export const chunkFile = (file, onChunk, signal) => {
         const reader = new FileReader();
 
         reader.onload = async (e) => {
-            if (signal?.aborted) {
-                reject(new Error('Transfer cancelled'));
-                return;
-            }
+            try {
+                if (signal?.aborted) {
+                    reject(new Error('Transfer cancelled'));
+                    return;
+                }
 
-            const result = onChunk(e.target.result, offset);
-            if (result instanceof Promise) {
-                await result;
-            }
+                const result = onChunk(e.target.result, offset);
+                if (result instanceof Promise) {
+                    await result;
+                }
 
-            // Double check after async operation
-            if (signal?.aborted) {
-                reject(new Error('Transfer cancelled'));
-                return;
-            }
+                // Double check after async operation
+                if (signal?.aborted) {
+                    reject(new Error('Transfer cancelled'));
+                    return;
+                }
 
-            offset += e.target.result.byteLength;
+                offset += e.target.result.byteLength;
 
-            if (offset < file.size) {
-                readNextChunk();
-            } else {
-                resolve();
+                if (offset < file.size) {
+                    readNextChunk();
+                } else {
+                    resolve();
+                }
+            } catch (err) {
+                reject(err);
             }
         };
 
