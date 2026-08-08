@@ -59,14 +59,14 @@ const ConnectionConsentModal = ({ pending, onAccept, onReject }) => {
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center">
                             <span className="text-cyan-400 text-sm font-bold">
-                                {(pending.peerId || '?')[0].toUpperCase()}
+                                {(pending.deviceName || pending.peerId || '?')[0].toUpperCase()}
                             </span>
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-white truncate">
-                                {pending.deviceName || pending.peerId}
+                                {pending.deviceName || pending.peerId || 'Unknown Device'}
                             </p>
-                            {pending.peerId !== pending.deviceName && (
+                            {pending.peerId && pending.deviceName && pending.peerId !== pending.deviceName && (
                                 <p className="text-xs text-zinc-500 font-mono truncate">
                                     {pending.peerId}
                                 </p>

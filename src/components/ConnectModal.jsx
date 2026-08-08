@@ -2,20 +2,21 @@ import { X, Scan, QrCode } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import QRScanner from './QRScanner';
 import AnimatedQRCode from './AnimatedQRCode';
+import useAppStore from '../stores/useAppStore';
 
 const ConnectModal = ({ onClose, myPeerId, onScanConnect }) => {
     const [qrUrl, setQrUrl] = useState('');
     const [showMyQR, setShowMyQR] = useState(false);
+    const deviceName = useAppStore(s => s.deviceName);
 
     useEffect(() => {
         const url = `${window.location.protocol}//${window.location.host}/?connect=${myPeerId}`;
         setQrUrl(url);
     }, [myPeerId]);
 
-    // Get device name from peer ID
-    const getDeviceName = (peerId) => {
-        if (!peerId) return 'Loading...';
-        return peerId;
+    // Get device name
+    const getDeviceName = () => {
+        return deviceName || myPeerId || 'Loading...';
     };
 
     return (
