@@ -359,7 +359,8 @@ const setupConnectionHandlers = (conn, timeoutRef, isIncoming = false) => {
 
         console.log('[Conn] Opened with:', conn.peer);
         
-        const deviceName = useAppStore.getState().deviceName;
+        const currentLocalStore = useAppStore.getState();
+        const deviceName = currentLocalStore.deviceName || currentLocalStore.myPeerId;
 
         if (isIncoming) {
             // We accepted an incoming connection
@@ -398,6 +399,10 @@ const setupConnectionHandlers = (conn, timeoutRef, isIncoming = false) => {
     conn.on('data', (data) => {
         if (data?.type === 'SYSTEM' && data?.payload?.action === 'ACCEPT_CONNECTION') {
             console.log('[Consent] Peer accepted connection:', conn.peer);
+            if (data.payload?.deviceName && conn.peer) {
+                useAppStore.getState().setPeerDeviceName(conn.peer, data.payload.deviceName);
+                useAppStore.getState().addTrustedDevice(conn.peer, data.payload.deviceName);
+            }
             useAppStore.getState().addConnection(conn);
             
             if (timeoutRef?.current) {
@@ -455,7 +460,7 @@ const setupConnectionHandlers = (conn, timeoutRef, isIncoming = false) => {
             return;
         }
 
-        const deviceName = useAppStore.getState().deviceName;
+        const deviceName = currentStore.deviceName || currentStore.myPeerId;
         
         if (isIncoming) {
             useAppStore.getState().addConnection(conn);

@@ -74,15 +74,39 @@ const TransferPage = () => {
         if (connectionStatus === 'disconnected') {
             if (remotePeerIds && remotePeerIds.length > 0) {
                 console.log('[TransferPage] Attempting auto-reconnect to:', remotePeerIds);
-                const timer = setTimeout(() => {
-                    // Check if we are still disconnected before attempting to reconnect
-                    if (useAppStore.getState().connectionStatus !== 'disconnected') return;
-                    
+                let attempt = 0;
+                const MAX_RECONNECT_ATTEMPTS = 60; // Keep attempting for up to ~5 minutes before giving up
+
+                const tryReconnect = () => {
+                    const currentStatus = useAppStore.getState().connectionStatus;
+                    if (currentStatus === 'connected') return;
+
+                    attempt++;
+                    if (attempt > MAX_RECONNECT_ATTEMPTS) {
+                        console.warn('[TransferPage] Max reconnect attempts reached. Giving up.');
+                        useAppStore.getState().resetConnectionSession();
+                        navigate('/');
+                        return;
+                    }
+
+                    console.log(`[TransferPage] Auto-reconnect attempt ${attempt}/${MAX_RECONNECT_ATTEMPTS}`);
                     useAppStore.getState().setConnectionStatus('connecting');
-                    // Auto-reconnect to the primary (first) peer for simplicity on reload
                     remotePeerIds.forEach(peerId => connectToPeer(peerId));
+                };
+
+                const initialTimer = setTimeout(tryReconnect, 2000);
+                const interval = setInterval(() => {
+                    if (useAppStore.getState().connectionStatus !== 'connected') {
+                        tryReconnect();
+                    } else {
+                        clearInterval(interval);
+                    }
                 }, 5000);
-                return () => clearTimeout(timer);
+
+                return () => {
+                    clearTimeout(initialTimer);
+                    clearInterval(interval);
+                };
             } else {
                 navigate('/');
             }

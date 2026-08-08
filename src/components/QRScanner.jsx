@@ -44,8 +44,20 @@ const QRScanner = ({ onScan }) => {
         }
     }, []);
 
+    const lastScanTimeRef = useRef(0);
+    const SCAN_INTERVAL_MS = 66; // ~15 FPS decode limit to reduce CPU load
+
     const scanQRCode = useCallback(() => {
         if (hasScanned || !isScanningRef.current) return;
+
+        const now = performance.now();
+        if (now - lastScanTimeRef.current < SCAN_INTERVAL_MS) {
+            if (isScanningRef.current) {
+                animationRef.current = requestAnimationFrame(scanQRCode);
+            }
+            return;
+        }
+        lastScanTimeRef.current = now;
 
         const video = videoRef.current;
         const canvas = canvasRef.current;
@@ -67,14 +79,17 @@ const QRScanner = ({ onScan }) => {
         }
 
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        // Downscale to max 640px for faster QR decoding while preserving scan accuracy
+        const MAX_SCAN_DIM = 640;
+        const scale = Math.min(1, MAX_SCAN_DIM / Math.max(video.videoWidth, video.videoHeight));
+        canvas.width = Math.round(video.videoWidth * scale);
+        canvas.height = Math.round(video.videoHeight * scale);
 
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: "dontInvert"
+            inversionAttempts: "attemptBoth"
         });
 
         if (code && code.data) {
