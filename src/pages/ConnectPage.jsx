@@ -44,6 +44,7 @@ const ConnectPage = () => {
     const [isEditingName, setIsEditingName] = useState(false);
     const [nameInput, setNameInput] = useState(deviceName || myPeerId || '');
     const nameInputRef = useRef(null);
+    const hasAutoConnectedRef = useRef(false);
 
     // Sync nameInput when deviceName or myPeerId changes (only if not actively editing)
     useEffect(() => {
@@ -81,7 +82,8 @@ const ConnectPage = () => {
         const params = new URLSearchParams(window.location.search);
         const targetPeerId = params.get('connect');
 
-        if (targetPeerId) {
+        if (targetPeerId && !hasAutoConnectedRef.current) {
+            hasAutoConnectedRef.current = true;
             connectToPeer(targetPeerId);
             const url = new URL(window.location);
             url.searchParams.delete('connect');
@@ -101,7 +103,8 @@ const ConnectPage = () => {
 
     const copyMyId = () => {
         if (myPeerId) {
-            navigator.clipboard.writeText(myPeerId);
+            const shareUrl = `${window.location.protocol}//${window.location.host}/?connect=${myPeerId}`;
+            navigator.clipboard.writeText(shareUrl);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         }
@@ -113,8 +116,19 @@ const ConnectPage = () => {
 
         let formattedId = trimmedInput;
 
+        // Check if user pasted a full share link
+        try {
+            const url = new URL(trimmedInput);
+            const connectId = url.searchParams.get('connect');
+            if (connectId) {
+                formattedId = connectId;
+            }
+        } catch (e) {
+            // Not a URL, continue normal flow
+        }
+
         // Auto-format default generated IDs (e.g. "astro77" -> "astro-77")
-        if (!formattedId.includes('-') && !formattedId.includes(' ')) {
+        if (!formattedId.includes('-') && !formattedId.includes(' ') && !formattedId.includes('http')) {
             const match = formattedId.match(/^([a-zA-Z]+)(\d+)$/);
             if (match) {
                 formattedId = `${match[1].toLowerCase()}-${match[2]}`;
@@ -221,8 +235,8 @@ const ConnectPage = () => {
                                 type="button"
                                 onClick={copyMyId}
                                 className="relative w-36 h-36 sm:w-40 sm:h-40 lg:w-44 lg:h-44 bg-white rounded-[24px] sm:rounded-[28px] lg:rounded-[32px] flex items-center justify-center shrink-0 p-2 sm:p-2.5 transition-all duration-300 ease-out hover:scale-[1.03] hover:shadow-[0_10px_28px_rgba(0,0,0,0.3)] active:scale-[0.98]"
-                                title="Copy device ID"
-                                aria-label="Copy device ID"
+                                title="Copy share link"
+                                aria-label="Copy share link"
                                 style={{
                                     boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
                                 }}
@@ -292,12 +306,12 @@ const ConnectPage = () => {
                                 type="button"
                                 onClick={copyMyId}
                                 className="group relative flex justify-between items-center w-full text-left shrink-0 min-h-[56px] sm:min-h-[64px] px-3 sm:px-4 py-2 rounded-xl transition-all duration-200 hover:bg-white/5"
-                                title="Copy device ID"
-                                aria-label="Copy device ID"
+                                title="Copy share link"
+                                aria-label="Copy share link"
                             >
                                 <div className="min-w-0 flex-1">
                                     <div className="text-zinc-500 text-[10px] sm:text-xs font-medium tracking-widest uppercase mb-1">
-                                        DEVICE ID
+                                        SHARE LINK
                                     </div>
                                     <div className="text-neutral-200 text-sm sm:text-base font-medium truncate group-hover:text-white transition-colors">
                                         {deviceName || myPeerId ? (
