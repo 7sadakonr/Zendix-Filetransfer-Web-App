@@ -143,6 +143,7 @@ const initializePeer = () => {
 
     peerInstance.on('open', (id) => {
         console.log('[Peer] Opened with ID:', id);
+        peerInstance._isReady = true;
         useAppStore.getState().setMyPeerId(id);
         useAppStore.getState().setPreferredPeerId(id);
         unavailableIdRetries = 0;
@@ -591,6 +592,16 @@ export const usePeerConnection = () => {
         }
 
         const store = useAppStore.getState();
+        
+        // Prevent connecting to self
+        if (peerId === store.myPeerId) {
+            store.setToastMessage('ไม่สามารถเชื่อมต่อกับตัวเองได้ ❌');
+            if (store.connectionStatus === 'connecting') {
+                store.setConnectionStatus('disconnected');
+            }
+            return;
+        }
+
         if (store.activeConnections.some(c => c.peer === peerId)) {
             console.warn('[Conn] Already connected to this peer');
             return;
@@ -606,20 +617,37 @@ export const usePeerConnection = () => {
             useAppStore.getState().setConnectionStatus('connecting');
         }
 
-        const conn = peerInstance.connect(peerId, { reliable: true });
-        
-        // Add a safety timeout to avoid infinite "Waiting..." state
-        // Set to 40s to allow the receiver's 30-second consent modal to remain valid
-        const connectionTimeout = { current: null };
-        connectionTimeout.current = setTimeout(() => {
-            if (useAppStore.getState().connectionStatus !== 'connected') {
-                console.warn('[Conn] Connection timed out after 40 seconds. Forcing disconnect.');
-                conn.close();
+        const doConnect = () => {
+            if (!peerInstance || peerInstance.destroyed || peerInstance.disconnected) {
+                console.error('[Conn] Peer lost connection before connecting');
                 useAppStore.getState().setConnectionStatus('disconnected');
+                return;
             }
-        }, 40000);
+            
+            const conn = peerInstance.connect(peerId, { reliable: true });
+            
+            // Add a safety timeout to avoid infinite "Waiting..." state
+            const connectionTimeout = { current: null };
+            connectionTimeout.current = setTimeout(() => {
+                if (useAppStore.getState().connectionStatus !== 'connected') {
+                    console.warn('[Conn] Connection timed out after 40 seconds. Forcing disconnect.');
+                    try { conn.close(); } catch(e) {}
+                    useAppStore.getState().setConnectionStatus('disconnected');
+                    useAppStore.getState().setToastMessage('การเชื่อมต่อหมดเวลา (Timeout) กรุณาลองใหม่ ❌');
+                }
+            }, 40000);
 
-        setupConnectionHandlers(conn, connectionTimeout, false);
+            setupConnectionHandlers(conn, connectionTimeout, false);
+        };
+
+        const isReady = peerInstance._isReady || (peerInstance.id && !peerInstance.disconnected);
+        
+        if (isReady) {
+            doConnect();
+        } else {
+            console.log('[Conn] Peer not open yet, waiting for open event...');
+            peerInstance.once('open', doConnect);
+        }
     }, []);
 
     const sendData = useCallback((type, payload) => {
