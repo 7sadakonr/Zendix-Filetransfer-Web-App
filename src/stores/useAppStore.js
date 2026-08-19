@@ -91,6 +91,10 @@ const useAppStore = create(
             setPendingIncomingConnection: (pending) => set({ pendingIncomingConnection: pending }),
             clearPendingIncomingConnection: () => set({ pendingIncomingConnection: null }),
 
+            pendingOutgoingConnection: null, // { conn, peerId, timeoutRef }
+            setPendingOutgoingConnection: (pending) => set({ pendingOutgoingConnection: pending }),
+            clearPendingOutgoingConnection: () => set({ pendingOutgoingConnection: null }),
+
             // Clipboard
             clipboardHistory: [],
             lastReceivedClipboard: null, // Trigger for auto-write attempts
@@ -139,7 +143,8 @@ const useAppStore = create(
                     retryCount: 0,
                     activeTab: 'clipboard',
                     lastReceivedClipboard: null,
-                    pendingIncomingConnection: null
+                    pendingIncomingConnection: null,
+                    pendingOutgoingConnection: null
                 };
             }),
         }),

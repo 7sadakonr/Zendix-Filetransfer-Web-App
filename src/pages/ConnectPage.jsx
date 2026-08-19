@@ -35,7 +35,7 @@ const itemVariants = {
 const ConnectPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { connectToPeer, regeneratePeerId, changePeerId, acceptIncomingConnection, rejectIncomingConnection, pendingIncomingConnection } = usePeerConnection();
+    const { connectToPeer, regeneratePeerId, changePeerId, acceptIncomingConnection, rejectIncomingConnection, pendingIncomingConnection, cancelOutgoingConnection } = usePeerConnection();
     const { myPeerId, connectionStatus, remotePeerIds, deviceName, setDeviceName } = useAppStore();
 
     const [mobileTab, setMobileTab] = useState('identity');
@@ -472,10 +472,10 @@ const ConnectPage = () => {
 
             {/* Connection Waiting Modal */}
             <ConnectionWaitingModal
-                isConnecting={connectionStatus === 'connecting'}
+                status={connectionStatus}
                 peerId={remoteIdInput}
                 onCancel={() => {
-                    useAppStore.getState().setConnectionStatus('disconnected');
+                    cancelOutgoingConnection();
                 }}
             />
         </main>

@@ -90,7 +90,7 @@ const TransferPage = () => {
                     }
 
                     console.log(`[TransferPage] Auto-reconnect attempt ${attempt}/${MAX_RECONNECT_ATTEMPTS}`);
-                    useAppStore.getState().setConnectionStatus('connecting');
+                    useAppStore.getState().setConnectionStatus('connecting_peer');
                     remotePeerIds.forEach(peerId => connectToPeer(peerId));
                 };
 
@@ -544,7 +544,7 @@ const TransferPage = () => {
                     <div className="flex items-center justify-between shrink-0 mb-2 sm:mb-4">
                         <div>
                             <h2 className="text-neutral-200 text-base sm:text-2xl font-semibold" id="activity-heading">
-                                {connectionStatus === 'connecting'
+                                {['connecting_peer', 'awaiting_accept'].includes(connectionStatus)
                                     ? retryCount > 0
                                         ? `Retrying... (${retryCount})`
                                         : 'Reconnecting...'
