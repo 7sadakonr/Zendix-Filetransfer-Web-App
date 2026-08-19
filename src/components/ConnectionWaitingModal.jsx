@@ -1,7 +1,7 @@
 import { X, Loader2 } from 'lucide-react';
 
-const ConnectionWaitingModal = ({ isConnecting, onCancel, peerId }) => {
-    if (!isConnecting) return null;
+const ConnectionWaitingModal = ({ status, onCancel, peerId }) => {
+    if (status !== 'connecting_peer' && status !== 'awaiting_accept' && status !== 'connecting') return null;
 
     return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 px-4 backdrop-blur-md">
@@ -19,10 +19,14 @@ const ConnectionWaitingModal = ({ isConnecting, onCancel, peerId }) => {
 
                 {/* Title */}
                 <h3 className="text-lg font-semibold text-white text-center mb-1">
-                    Waiting for Peer
+                    {status === 'connecting_peer' ? 'Connecting' : 'Waiting for Peer'}
                 </h3>
                 <p className="text-sm text-zinc-400 text-center mb-6">
-                    Waiting for {peerId ? <span className="text-white font-mono">{peerId}</span> : 'peer'} to accept connection...
+                    {status === 'connecting_peer' ? (
+                        <>Establishing connection to {peerId ? <span className="text-white font-mono">{peerId}</span> : 'peer'}...</>
+                    ) : (
+                        <>Waiting for {peerId ? <span className="text-white font-mono">{peerId}</span> : 'peer'} to accept connection...</>
+                    )}
                 </p>
 
                 {/* Cancel Button */}

@@ -179,7 +179,8 @@ const initializePeer = () => {
         // Auto-clear consent modal if sender disconnects or closes before accept/reject
         conn.on('close', () => {
             const currentPending = useAppStore.getState().pendingIncomingConnection;
-            if (currentPending && currentPending.peerId === conn.peer) {
+            // CRITICAL FIX: Must check currentPending.conn === conn to avoid race condition with duplicate/stale connections
+            if (currentPending && currentPending.conn === conn) {
                 console.log('[Consent] Sender disconnected while waiting for consent:', conn.peer);
                 useAppStore.getState().clearPendingIncomingConnection();
             }
@@ -237,7 +238,7 @@ const initializePeer = () => {
                 store.removeConnection(match[1], false); // Completely remove this dead peer
             }
 
-            if (store.connectionStatus === 'connecting') {
+            if (store.connectionStatus === 'connecting_peer' || store.connectionStatus === 'awaiting_accept') {
                 store.setConnectionStatus('disconnected');
             }
         } else if (err.type === 'unavailable-id') {
@@ -284,7 +285,7 @@ const initializePeer = () => {
             }
         } else {
             // For other generic errors, ensure the UI isn't stuck "connecting" forever
-            if (store.connectionStatus === 'connecting') {
+            if (store.connectionStatus === 'connecting_peer' || store.connectionStatus === 'awaiting_accept') {
                 store.setConnectionStatus('disconnected');
             }
         }
@@ -371,7 +372,21 @@ const setupConnectionHandlers = (conn, timeoutRef, isIncoming = false) => {
             conn.send({ type: 'SYSTEM', payload: { action: 'ACCEPT_CONNECTION', deviceName } });
         } else {
             // Outgoing connection, waiting for peer to accept
+            useAppStore.getState().setConnectionStatus('awaiting_accept');
             conn.send({ type: 'SYSTEM', payload: { action: 'DEVICE_INFO', deviceName } });
+            
+            // Set ACCEPT_TIMEOUT
+            if (timeoutRef) {
+                timeoutRef.current = setTimeout(() => {
+                    if (useAppStore.getState().connectionStatus !== 'connected') {
+                        console.warn('[Conn] Accept timed out after 35 seconds. Forcing disconnect.');
+                        try { conn.close(); } catch(e) {}
+                        useAppStore.getState().setConnectionStatus('disconnected');
+                        useAppStore.getState().clearPendingOutgoingConnection();
+                        useAppStore.getState().setToastMessage('อีกฝ่ายไม่ตอบรับการเชื่อมต่อ ❌');
+                    }
+                }, 35000);
+            }
             // We do NOT addConnection here. We wait for ACCEPT_CONNECTION via data channel.
             return;
         }
@@ -405,6 +420,7 @@ const setupConnectionHandlers = (conn, timeoutRef, isIncoming = false) => {
                 useAppStore.getState().addTrustedDevice(conn.peer, data.payload.deviceName);
             }
             useAppStore.getState().addConnection(conn);
+            useAppStore.getState().clearPendingOutgoingConnection();
             
             if (timeoutRef?.current) {
                 clearTimeout(timeoutRef.current);
@@ -469,7 +485,20 @@ const setupConnectionHandlers = (conn, timeoutRef, isIncoming = false) => {
             useAppStore.getState().setRetryCount(0);
             conn.send({ type: 'SYSTEM', payload: { action: 'ACCEPT_CONNECTION', deviceName } });
         } else {
+            useAppStore.getState().setConnectionStatus('awaiting_accept');
             conn.send({ type: 'SYSTEM', payload: { action: 'DEVICE_INFO', deviceName } });
+            if (timeoutRef) {
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                timeoutRef.current = setTimeout(() => {
+                    if (useAppStore.getState().connectionStatus !== 'connected') {
+                        console.warn('[Conn] Accept timed out after 35 seconds. Forcing disconnect.');
+                        try { conn.close(); } catch(e) {}
+                        useAppStore.getState().setConnectionStatus('disconnected');
+                        useAppStore.getState().clearPendingOutgoingConnection();
+                        useAppStore.getState().setToastMessage('อีกฝ่ายไม่ตอบรับการเชื่อมต่อ ❌');
+                    }
+                }, 35000);
+            }
             return; // Wait for ACCEPT_CONNECTION
         }
 
@@ -520,10 +549,12 @@ const handleIncomingData = (data, senderPeerId) => {
                 console.warn('[System] Connection rejected: Room is full.');
                 store.setToastMessage('ห้องเต็มแล้ว (จำกัดการส่งเป็นกลุ่มสูงสุด 3 เครื่อง) ❌');
                 store.removeConnection(data.payload.peer || "unknown");
+                store.clearPendingOutgoingConnection();
             } else if (data.payload?.action === 'REJECT_USER') {
                 console.warn('[System] Connection rejected by user.');
                 store.setToastMessage('อีกฝ่ายปฏิเสธการเชื่อมต่อ ❌');
                 store.removeConnection(data.payload.peer || "unknown");
+                store.clearPendingOutgoingConnection();
             } else if (data.payload?.action === 'DEVICE_INFO') {
                 // Store the peer's friendly device name
                 const deviceName = data.payload.deviceName;
@@ -596,7 +627,7 @@ export const usePeerConnection = () => {
         // Prevent connecting to self
         if (peerId === store.myPeerId) {
             store.setToastMessage('ไม่สามารถเชื่อมต่อกับตัวเองได้ ❌');
-            if (store.connectionStatus === 'connecting') {
+            if (store.connectionStatus === 'connecting_peer' || store.connectionStatus === 'awaiting_accept') {
                 store.setConnectionStatus('disconnected');
             }
             return;
@@ -614,7 +645,7 @@ export const usePeerConnection = () => {
 
         console.log('[Conn] Initiating connection to:', peerId);
         if (store.activeConnections.length === 0) {
-            useAppStore.getState().setConnectionStatus('connecting');
+            useAppStore.getState().setConnectionStatus('connecting_peer');
         }
 
         const doConnect = () => {
@@ -626,21 +657,24 @@ export const usePeerConnection = () => {
             
             const conn = peerInstance.connect(peerId, { reliable: true });
             
-            // Add a safety timeout to avoid infinite "Waiting..." state
+            // Add a safety timeout to avoid infinite "Connecting..." state
             const connectionTimeout = { current: null };
             connectionTimeout.current = setTimeout(() => {
                 if (useAppStore.getState().connectionStatus !== 'connected') {
-                    console.warn('[Conn] Connection timed out after 40 seconds. Forcing disconnect.');
+                    console.warn('[Conn] Connection timed out after 15 seconds. Forcing disconnect.');
                     try { conn.close(); } catch(e) {}
                     useAppStore.getState().setConnectionStatus('disconnected');
+                    useAppStore.getState().clearPendingOutgoingConnection();
                     useAppStore.getState().setToastMessage('การเชื่อมต่อหมดเวลา (Timeout) กรุณาลองใหม่ ❌');
                 }
-            }, 40000);
+            }, 15000);
+            
+            useAppStore.getState().setPendingOutgoingConnection({ conn, peerId, timeoutRef: connectionTimeout });
 
             setupConnectionHandlers(conn, connectionTimeout, false);
         };
 
-        const isReady = peerInstance._isReady || (peerInstance.id && !peerInstance.disconnected);
+        const isReady = peerInstance._isReady || peerInstance.open;
         
         if (isReady) {
             doConnect();
@@ -660,6 +694,28 @@ export const usePeerConnection = () => {
             });
         } else {
             console.warn('[Conn] Cannot send, not connected');
+        }
+    }, []);
+
+    const cancelOutgoingConnection = useCallback(() => {
+        const store = useAppStore.getState();
+        const pending = store.pendingOutgoingConnection;
+        
+        if (pending) {
+            console.log('[Conn] Cancelling outgoing connection to:', pending.peerId);
+            if (pending.timeoutRef?.current) {
+                clearTimeout(pending.timeoutRef.current);
+            }
+            try {
+                if (pending.conn) pending.conn.close();
+            } catch (e) {
+                console.error('[Conn] Error closing outgoing connection:', e);
+            }
+            store.clearPendingOutgoingConnection();
+        }
+        
+        if (store.activeConnections.length === 0) {
+            store.setConnectionStatus('disconnected');
         }
     }, []);
 
@@ -832,6 +888,7 @@ export const usePeerConnection = () => {
         disconnectPeer: manualDisconnect,
         sendData,
         acceptIncomingConnection,
-        rejectIncomingConnection
+        rejectIncomingConnection,
+        cancelOutgoingConnection
     };
 };
