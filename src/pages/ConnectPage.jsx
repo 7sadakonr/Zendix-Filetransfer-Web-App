@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useState, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { usePeerConnection } from '../hooks/usePeerConnection';
@@ -34,6 +34,7 @@ const itemVariants = {
 
 const ConnectPage = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { connectToPeer, regeneratePeerId, changePeerId, acceptIncomingConnection, rejectIncomingConnection, pendingIncomingConnection } = usePeerConnection();
     const { myPeerId, connectionStatus, remotePeerIds, deviceName, setDeviceName } = useAppStore();
 
@@ -44,7 +45,22 @@ const ConnectPage = () => {
     const [isEditingName, setIsEditingName] = useState(false);
     const [nameInput, setNameInput] = useState(deviceName || myPeerId || '');
     const nameInputRef = useRef(null);
-    const hasAutoConnectedRef = useRef(false);
+
+    // Every explicit connect action is treated as a fresh connection intent.
+    // If there is no real active connection, clear stale persisted peers first so
+    // an old session cannot redirect/reconnect before the newly scanned peer.
+    const startConnectionIntent = useCallback((peerId) => {
+        const targetPeerId = peerId?.trim();
+        if (!targetPeerId) return;
+
+        const store = useAppStore.getState();
+        if (store.activeConnections.length === 0) {
+            store.resetConnectionSession();
+        }
+
+        setRemoteIdInput(targetPeerId);
+        connectToPeer(targetPeerId);
+    }, [connectToPeer]);
 
     // Sync nameInput when deviceName or myPeerId changes (only if not actively editing)
     useEffect(() => {
@@ -77,29 +93,45 @@ const ConnectPage = () => {
         setIsEditingName(false);
     };
 
-    // Auto-Connect from URL
+    // Auto-Connect from URL.
+    // Depend on router location.search instead of a one-shot ref so the same PWA/tab
+    // can receive the same QR/share link again without requiring a refresh.
     useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const targetPeerId = params.get('connect');
+        const params = new URLSearchParams(location.search);
+        const targetPeerId = params.get('connect')?.trim();
 
-        if (targetPeerId && !hasAutoConnectedRef.current) {
-            hasAutoConnectedRef.current = true;
-            connectToPeer(targetPeerId);
-            const url = new URL(window.location);
-            url.searchParams.delete('connect');
-            window.history.replaceState({}, '', url);
-        }
-    }, [connectToPeer]);
+        if (!targetPeerId) return;
 
-    // Navigate to transfer when connected or if session restored
+        startConnectionIntent(targetPeerId);
+
+        // Consume only the connect param. Removing it is important because when the
+        // same QR is opened again, location.search changes back to ?connect=... and
+        // this effect will intentionally run again.
+        params.delete('connect');
+        const nextSearch = params.toString();
+        navigate(
+            {
+                pathname: location.pathname,
+                search: nextSearch ? `?${nextSearch}` : ''
+            },
+            { replace: true }
+        );
+    }, [location.pathname, location.search, navigate, startConnectionIntent]);
+
+    // Navigate to transfer when connected or if session restored.
+    // Never restore an old persisted session during the render that contains a new
+    // share-link intent; startConnectionIntent will clear stale peers first.
     useEffect(() => {
+        const hasIncomingConnectIntent = new URLSearchParams(location.search).has('connect');
+        if (hasIncomingConnectIntent) return;
+
         if (connectionStatus === 'connected') {
             navigate('/transfer');
         } else if (remotePeerIds && remotePeerIds.length > 0) {
             // Auto redirect to transfer page to attempt reconnection
             navigate('/transfer');
         }
-    }, [connectionStatus, remotePeerIds, navigate]);
+    }, [connectionStatus, remotePeerIds, navigate, location.search]);
 
     const copyMyId = () => {
         if (myPeerId) {
@@ -135,7 +167,7 @@ const ConnectPage = () => {
             }
         }
 
-        connectToPeer(formattedId);
+        startConnectionIntent(formattedId);
     };
 
     const handleLogoClick = () => {
@@ -425,7 +457,7 @@ const ConnectPage = () => {
                     myPeerId={myPeerId}
                     onClose={() => setShowScanner(false)}
                     onScanConnect={(id) => {
-                        connectToPeer(id);
+                        startConnectionIntent(id);
                         setShowScanner(false);
                     }}
                 />
@@ -451,5 +483,3 @@ const ConnectPage = () => {
 };
 
 export default ConnectPage;
-
-
