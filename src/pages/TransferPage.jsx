@@ -30,7 +30,8 @@ import { getDeviceName } from '../utils/platform';
 import { getFilesFromDataTransfer, getFilesFromFileList } from '../utils/fileCollection';
 import ClipboardToast from '../components/ClipboardToast';
 import ConnectionConsentModal from '../components/ConnectionConsentModal';
-import { Clipboard, FileText, Copy, Check, Send, Upload, File, X, LogOut, Download, Image, Wifi, Globe } from 'lucide-react';
+import ConnectModal from '../components/ConnectModal';
+import { Clipboard, FileText, Copy, Check, Send, Upload, File, X, LogOut, Download, Image, Wifi, Globe, QrCode } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import clsx from 'clsx';
 
@@ -48,6 +49,7 @@ const TransferPage = () => {
     const [isDraggingOver, setIsDraggingOver] = useState(false);
     const [expandedItems, setExpandedItems] = useState({});
     const [showConnectInfo, setShowConnectInfo] = useState(false);
+    const [showScanner, setShowScanner] = useState(false);
     const [peerIdCopied, setPeerIdCopied] = useState(false);
     const textareaRef = useRef(null);
     const touchStartY = useRef(null);
@@ -364,6 +366,14 @@ const TransferPage = () => {
                                 title="Disconnect"
                             >
                                 <LogOut size={15} />
+                            </button>
+                            <button
+                                onClick={() => setShowScanner(true)}
+                                aria-label="Scan to connect to another peer"
+                                className="p-2 sm:p-2.5 rounded-full bg-[#2a2a2a] border border-white/[0.08] text-zinc-500 hover:text-cyan-400 hover:border-cyan-500/30 hover:bg-cyan-500/10 transition-all"
+                                title="Add Peer"
+                            >
+                                <QrCode size={15} />
                             </button>
                             <div className="flex-1 flex bg-[#2a2a2a] rounded-full p-1 border border-white/[0.08]">
                                 <button
@@ -878,6 +888,18 @@ const TransferPage = () => {
                     background: rgba(255, 255, 255, 0.2);
                 }
             `}</style>
+
+            {/* Scanner Modal */}
+            {showScanner && (
+                <ConnectModal
+                    myPeerId={myPeerId}
+                    onClose={() => setShowScanner(false)}
+                    onScanConnect={(id) => {
+                        connectToPeer(id);
+                        setShowScanner(false);
+                    }}
+                />
+            )}
 
             {/* Connection Consent Modal */}
             <ConnectionConsentModal
